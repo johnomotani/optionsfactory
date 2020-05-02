@@ -4,6 +4,16 @@ from ..optionsfactory import OptionsFactory, WithMeta
 from ..checks import is_positive
 
 
+as_table_test_str = (
+    "\nOptions\n"
+    "=======\n"
+    "Name                                              |  Value                      \n"
+    "--------------------------------------------------------------------------------\n"
+    "a                                                 |  1               (default)  \n"
+    "b                                                 |  3                          \n"
+)
+
+
 class TestOptions:
     def test_defaults(self):
         factory = OptionsFactory(
@@ -256,3 +266,8 @@ class TestOptions:
         assert sorted([k for k in opts]) == sorted(["a", "b"])
         assert sorted(opts.values()) == sorted([3, 3])
         assert sorted(opts.items()) == sorted([("a", 3), ("b", 3)])
+
+    def test_as_table(self):
+        factory = OptionsFactory(a=1, b=2)
+        opts = factory.create({"b": 3})
+        assert opts.as_table() == as_table_test_str

@@ -30,7 +30,8 @@ def _checked(value, *, meta=None, name=None):
 
 def _options_table_string(options):
     """Return a string containing a table of options set"""
-    formatstring = "{:<50}|  {:<30}\n"
+    formatstring = "{:<50}|  {:<27}\n"
+    defaultformat = "{:<15} (default) "
 
     # Header
     result = (
@@ -41,6 +42,6 @@ def _options_table_string(options):
     for name, value in sorted(options.items()):
         valuestring = str(value)
         if options.is_default(name):
-            valuestring += "\t(default)"
+            valuestring = defaultformat.format(valuestring)
         result += formatstring.format(name, valuestring)
     return result

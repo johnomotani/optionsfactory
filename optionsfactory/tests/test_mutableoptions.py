@@ -3,6 +3,8 @@ import pytest
 from ..optionsfactory import MutableOptionsFactory, WithMeta
 from ..checks import is_positive
 
+from .test_options import as_table_test_str
+
 
 class TestOptions:
     def test_defaults(self):
@@ -363,3 +365,8 @@ class TestOptions:
         del opts.b
         with pytest.raises(ValueError, match="Circular definition"):
             opts.b
+
+    def test_as_table(self):
+        factory = MutableOptionsFactory(a=1, b=2)
+        opts = factory.create({"b": 3})
+        assert opts.as_table() == as_table_test_str
