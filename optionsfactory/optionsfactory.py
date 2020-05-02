@@ -118,6 +118,9 @@ class OptionsFactory:
         values : dict or Options, optional
             Non-default values to be used
         """
+        return self._create_immutable(values)
+
+    def _create_mutable(self, values=None):
         if values is None:
             values = {}
 
@@ -129,17 +132,21 @@ class OptionsFactory:
             if key not in self.__defaults:
                 del values[key]
 
+        # Return new MutableOptions instance
+        return OptionsFactory.MutableOptions(values, self.__defaults)
+
+    def _create_immutable(self, values=None):
         # Create MutableOptions instance: use to check the values and evaluate defaults
-        mutable_options = OptionsFactory.MutableOptions(values, self.__defaults)
+        mutable_options = self._create_mutable(values)
 
         # make a list of the explicitly-set (non-default) values
-        non_default = [k for k in values]
+        is_default = {key: mutable_options.is_default(key) for key in mutable_options}
 
         # Return new Options instance
         return OptionsFactory.Options(
             dict(mutable_options),
             {key: self.__defaults[key].doc for key in self.__defaults},
-            non_default,
+            is_default,
         )
 
     class MutableOptions:
@@ -252,7 +259,7 @@ class OptionsFactory:
             return len(self.__defaults)
 
         def __iter__(self):
-            return iter({key: value for key, value in self.items})
+            return iter({key: value for key, value in self.items()})
 
         def keys(self):
             return [key for key in self.__defaults]
@@ -284,10 +291,10 @@ class OptionsFactory:
 
         __frozen = False
 
-        def __init__(self, data, doc, non_default):
+        def __init__(self, data, doc, is_default):
             self.__data = data
             self.__doc = doc
-            self.__non_default = non_default
+            self.__is_default = is_default
 
             # Set self.__frozen to True to prevent attributes being changed
             self.__frozen = True
@@ -327,9 +334,10 @@ class OptionsFactory:
             super().__setattr__(key, value)
 
         def is_default(self, key):
-            if key not in self.__data:
+            try:
+                return self.__is_default[key]
+            except KeyError:
                 raise KeyError(f"{key} is not in this Options")
-            return key not in self.__non_default
 
         def __contains__(self, key):
             return key in self.__data
@@ -351,3 +359,39 @@ class OptionsFactory:
 
         def __str__(self):
             return str(self.__data)
+
+
+class MutableOptionsFactory(OptionsFactory):
+    """Factory to create MutableOptions or Options instances
+
+    """
+
+    def create(self, values=None):
+        """Create a MutableOptions instance
+
+        The members of the created MutableOptions are defined by this
+        MutableOptionsFactory instance. Any values passed in the values argument are
+        used, and the rest are set from defaults, which can be expressions depending on
+        other members.
+
+        Parameters
+        ----------
+        values : dict or Options, optional
+            Non-default values to be used
+        """
+        return self._create_mutable(values)
+
+    def create_immutable(self, values=None):
+        """Create an Options instance (which is immutable)
+
+        The members of the created Options are defined by this
+        MutableOptionsFactory instance. Any values passed in the values argument are
+        used, and the rest are set from defaults, which can be expressions depending on
+        other members.
+
+        Parameters
+        ----------
+        values : dict or Options, optional
+            Non-default values to be used
+        """
+        return self._create_immutable(values)
