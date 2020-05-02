@@ -168,7 +168,7 @@ class OptionsFactory:
             return {key: deepcopy(value.doc) for key, value in self.__defaults.items()}
 
         def as_table(self):
-            """Returns a string with a formatted table of the settings
+            """Return a string with a formatted table of the settings
             """
             return _options_table_string(self)
 
@@ -314,7 +314,7 @@ class OptionsFactory:
             return deepcopy(self.__doc)
 
         def as_table(self):
-            """Returns a string with a formatted table of the settings
+            """Return a string with a formatted table of the settings
             """
             return _options_table_string(self)
 
