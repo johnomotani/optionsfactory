@@ -48,6 +48,15 @@ class TestOptions:
         assert opts["g"] == 11
         assert opts["h"] == 3
 
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
+
         opts.a = 2
 
         assert opts.a == 2
@@ -68,6 +77,15 @@ class TestOptions:
         assert opts["g"] == 11
         assert opts["h"] == 4
 
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
+
         # Reset "a" to default
         del opts.a
         assert opts.a == 1
@@ -78,6 +96,15 @@ class TestOptions:
         assert opts.f == 2.0
         assert opts.g == 11
         assert opts.h == 3
+
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
 
         opts["a"] = 3
 
@@ -200,6 +227,15 @@ class TestOptions:
         with pytest.raises(KeyError):
             opts["z"]
 
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
+
         opts.a = 2
 
         assert opts.a == 2
@@ -210,6 +246,15 @@ class TestOptions:
         assert opts.f == 3.0
         assert opts.g == 13
         assert opts.h == 4
+
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
 
         opts["a"] = 3
 

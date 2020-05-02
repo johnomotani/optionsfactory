@@ -48,6 +48,15 @@ class TestOptions:
         assert opts["g"] == 11
         assert opts["h"] == 3
 
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
+
         with pytest.raises(TypeError):
             opts.a = 2
 
@@ -143,6 +152,15 @@ class TestOptions:
         # "z" should have been ignored
         with pytest.raises(KeyError):
             opts["z"]
+
+        assert opts.doc["a"] is None
+        assert opts.doc["b"] is None
+        assert opts.doc["c"] is None
+        assert opts.doc["d"] is None
+        assert opts.doc["e"] is None
+        assert opts.doc["f"] == "option f"
+        assert opts.doc["g"] == "option g"
+        assert opts.doc["h"] == "option h"
 
         with pytest.raises(TypeError):
             opts.a = 2
