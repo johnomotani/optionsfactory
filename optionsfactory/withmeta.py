@@ -105,16 +105,27 @@ class WithMeta:
         try:
             default_value = default_maybe_expression(options)
         except TypeError:
-            # Try evaluating as name of another option
+            # Try evaluating as name of another option, if default_maybe_expression is a
+            # str and could not be the value of the option
             if (
+                # Can only be a name if self.value is a str
                 isinstance(default_maybe_expression, str)
-                and (
-                    not isinstance(self.allowed, Sequence)
-                    or default_maybe_expression not in self.allowed
+                # Check value_type is set and does not include str, otherwise a string
+                # might be the value of the option
+                and (self.value_type is not None)
+                and (self.value_type is not str)
+                and not (
+                    isinstance(self.value_type, Sequence) and str in self.value_type
                 )
-                and (default_maybe_expression in options)
             ):
-                default_value = options[default_maybe_expression]
+                try:
+                    default_value = options[default_maybe_expression]
+                except KeyError:
+                    raise KeyError(
+                        f"The default {default_maybe_expression}"
+                        f"{' for '+str(name) if name is not None else ''} is not in "
+                        f"the options"
+                    )
             else:
                 default_value = default_maybe_expression
 
