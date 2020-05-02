@@ -118,9 +118,9 @@ class OptionsFactory:
         values : dict or Options, optional
             Non-default values to be used
         """
-        return self._create_immutable(values)
+        return self.__create_immutable(values)
 
-    def _create_mutable(self, values=None):
+    def __create_mutable(self, values=None):
         if values is None:
             values = {}
 
@@ -135,9 +135,9 @@ class OptionsFactory:
         # Return new MutableOptions instance
         return OptionsFactory.MutableOptions(values, self.__defaults)
 
-    def _create_immutable(self, values=None):
+    def __create_immutable(self, values=None):
         # Create MutableOptions instance: use to check the values and evaluate defaults
-        mutable_options = self._create_mutable(values)
+        mutable_options = self.__create_mutable(values)
 
         # make a list of the explicitly-set (non-default) values
         is_default = {key: mutable_options.is_default(key) for key in mutable_options}
@@ -399,7 +399,7 @@ class MutableOptionsFactory(OptionsFactory):
         values : dict or Options, optional
             Non-default values to be used
         """
-        return self._create_mutable(values)
+        return self._OptionsFactory__create_mutable(values)
 
     def create_immutable(self, values=None):
         """Create an Options instance (which is immutable)
@@ -414,4 +414,4 @@ class MutableOptionsFactory(OptionsFactory):
         values : dict or Options, optional
             Non-default values to be used
         """
-        return self._create_immutable(values)
+        return self._OptionsFactory__create_immutable(values)
