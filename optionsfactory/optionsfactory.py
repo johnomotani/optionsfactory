@@ -220,6 +220,11 @@ class OptionsFactory:
             return self.__cache[key]
 
         def __setitem__(self, key, value):
+            if key not in self.__defaults:
+                raise KeyError(
+                    f"Tried to set {key}={value} but {key} is not one of the defined "
+                    f"options"
+                )
             # Default values may change, so reset the cache
             self.__cache = {}
             self.__data[key] = _checked(value, meta=self.__defaults[key], name=key)
