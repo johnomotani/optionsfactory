@@ -371,6 +371,15 @@ class TestOptions:
         opts = factory.create({"b": 3})
         assert opts.as_table() == as_table_test_str
 
+    def test_str(self):
+        factory = MutableOptionsFactory(a=1, b=2)
+        opts = factory.create({"b": 3})
+        assert str(opts) == "{a: 1 (default), b: 3}"
+
+        del opts.b
+        opts.a = 4
+        assert str(opts) == "{a: 4, b: 2 (default)}"
+
 
 class TestMutableOptionsFactoryImmutable:
     def test_defaults(self):
@@ -629,3 +638,8 @@ class TestMutableOptionsFactoryImmutable:
         factory = MutableOptionsFactory(a=1, b=2)
         opts = factory.create_immutable({"b": 3})
         assert opts.as_table() == as_table_test_str
+
+    def test_str(self):
+        factory = MutableOptionsFactory(a=1, b=2)
+        opts = factory.create_immutable({"b": 3})
+        assert str(opts) == "{a: 1 (default), b: 3}"

@@ -271,3 +271,8 @@ class TestOptions:
         factory = OptionsFactory(a=1, b=2)
         opts = factory.create({"b": 3})
         assert opts.as_table() == as_table_test_str
+
+    def test_str(self):
+        factory = OptionsFactory(a=1, b=2)
+        opts = factory.create({"b": 3})
+        assert str(opts) == "{a: 1 (default), b: 3}"

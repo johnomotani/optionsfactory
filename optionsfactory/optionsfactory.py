@@ -368,7 +368,17 @@ class OptionsFactory:
             return zip(self.keys(), self.values())
 
         def __str__(self):
-            return str(self.__data)
+            string = "{"
+            for key in self.__data:
+                string += f"{key}: {self[key]}"
+                if self.is_default(key):
+                    string += " (default)"
+                string += ", "
+            if len(string) > 1:
+                # remove trailing ", "
+                string = string[:-2]
+            string += "}"
+            return string
 
 
 class MutableOptionsFactory(OptionsFactory):
