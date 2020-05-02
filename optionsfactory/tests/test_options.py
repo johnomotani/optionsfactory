@@ -297,3 +297,13 @@ class TestOptions:
 
         with pytest.raises(TypeError):
             opts.a = 5
+
+    def test_to_yaml(self):
+        pytest.importorskip("yaml")
+
+        factory = OptionsFactory(a=1, b=2)
+        opts = factory.create({"a": 3})
+
+        # file_like=None argument makes yaml.dump() return the YAML as a string
+        assert opts.to_yaml(None) == "a: 3\n"
+        assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"

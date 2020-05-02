@@ -187,6 +187,25 @@ class OptionsFactory:
             """
             return _options_table_string(self)
 
+        def to_yaml(self, file_like, with_defaults=False):
+            """Save the options to a YAML file
+
+            Save only the non-default options unless with_defaults=True is passed
+
+            Parameters
+            ----------
+            file_like : file handle or similar
+                File to write to
+            with_defaults : bool, default False
+                Save all the options, including default values
+            """
+            import yaml
+
+            if with_defaults:
+                return yaml.dump(dict(self), file_like)
+            else:
+                return yaml.dump(self.__data, file_like)
+
         def __getitem__(self, key):
             if key not in self.__defaults:
                 raise KeyError(f"This Options does not contain {key}")
@@ -332,6 +351,32 @@ class OptionsFactory:
             """Return a string with a formatted table of the settings
             """
             return _options_table_string(self)
+
+        def to_yaml(self, file_like, with_defaults=False):
+            """Save the options to a YAML file
+
+            Save only the non-default options unless with_defaults=True is passed
+
+            Parameters
+            ----------
+            file_like : file handle or similar
+                File to write to
+            with_defaults : bool, default False
+                Save all the options, including default values
+            """
+            import yaml
+
+            if with_defaults:
+                return yaml.dump(dict(self), file_like)
+            else:
+                return yaml.dump(
+                    {
+                        key: value
+                        for key, value in self.items()
+                        if not self.is_default(key)
+                    },
+                    file_like,
+                )
 
         def __getitem__(self, key):
             try:
