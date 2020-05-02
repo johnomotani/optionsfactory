@@ -230,14 +230,16 @@ class OptionsFactory:
             del self.__data[key]
 
         def __getattr__(self, key):
+            if key == "_MutableOptions__defaults":
+                return super(OptionsFactory.MutableOptions, self).__getattr__(key)
             if key in self.__defaults:
                 return self.__getitem__(key)
             raise AttributeError(f"This MutableOptions has no attribute {key}.")
 
         def __setattr__(self, key, value):
-            if hasattr(super(), "_MutableOptions__defaults") and key in self.__defaults:
-                self.__setitem__(key, value)
-            super().__setattr__(key, value)
+            if hasattr(self, "_MutableOptions__defaults") and key in self.__defaults:
+                return self.__setitem__(key, value)
+            super(OptionsFactory.MutableOptions, self).__setattr__(key, value)
 
         def __delattr__(self, key):
             if key in self.__data:
@@ -245,7 +247,7 @@ class OptionsFactory:
             elif key in self.__defaults:
                 # key is one of the options, but not set so don't need to do anything
                 return
-            super().__delattr__(key)
+            super(OptionsFactory.MutableOptions, self).__delattr__(key)
 
         def is_default(self, key):
             if key not in self.__defaults:
@@ -320,18 +322,18 @@ class OptionsFactory:
         def __getattr__(self, key):
             if key == "_Options__data":
                 # need to treat __data specially, as we use it for the next test
-                return super.__getattr__(key)
+                return super(OptionsFactory.Options, self).__getattr__(key)
             if key in self.__data:
                 return self.__getitem__(key)
             try:
-                return super.__getattr__(key)
+                return super(OptionsFactory.Options, self).__getattr__(key)
             except AttributeError:
                 raise AttributeError(f"This Options has no attribute {key}.")
 
         def __setattr__(self, key, value):
             if self.__frozen:
                 raise TypeError("Options does not allow assigning to attributes")
-            super().__setattr__(key, value)
+            super(OptionsFactory.Options, self).__setattr__(key, value)
 
         def is_default(self, key):
             try:
