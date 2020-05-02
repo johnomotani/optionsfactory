@@ -3,6 +3,10 @@ import pytest
 from ..optionsfactory import (
     OptionsFactory,
     WithMeta,
+)
+
+
+from ..checks import (
     NoneType,
     is_positive,
     is_positive_or_None,
