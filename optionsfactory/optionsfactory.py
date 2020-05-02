@@ -230,9 +230,15 @@ class OptionsFactory:
             self.__data[key] = _checked(value, meta=self.__defaults[key], name=key)
 
         def __delitem__(self, key):
-            # Default values may change, so reset the cache
-            self.__cache = {}
-            del self.__data[key]
+            if key not in self.__defaults:
+                raise KeyError(
+                    f"Tried to unset {key} but {key} is not one of the defined options"
+                )
+            if key in self.__data:
+                # Default values may change, so reset the cache
+                self.__cache = {}
+                del self.__data[key]
+            # Otherwise 'key' is a valid option but was not set, so nothing changes
 
         def __getattr__(self, key):
             if key == "_MutableOptions__defaults":
@@ -247,11 +253,8 @@ class OptionsFactory:
             super(OptionsFactory.MutableOptions, self).__setattr__(key, value)
 
         def __delattr__(self, key):
-            if key in self.__data:
+            if key in self.__defaults:
                 return self.__delitem__(key)
-            elif key in self.__defaults:
-                # key is one of the options, but not set so don't need to do anything
-                return
             super(OptionsFactory.MutableOptions, self).__delattr__(key)
 
         def is_default(self, key):
