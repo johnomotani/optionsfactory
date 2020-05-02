@@ -1,5 +1,7 @@
 import pytest
 
+from io import StringIO
+
 from ..optionsfactory import OptionsFactory, WithMeta
 from ..checks import is_positive
 
@@ -276,3 +278,22 @@ class TestOptions:
         factory = OptionsFactory(a=1, b=2)
         opts = factory.create({"b": 3})
         assert str(opts) == "{a: 1 (default), b: 3}"
+
+    def test_create_from_yaml(self):
+        pytest.importorskip("yaml")
+
+        factory = OptionsFactory(a=1, b=2)
+
+        with StringIO() as f:
+            f.write("a: 3\nc: 4")
+
+            # reset to beginning of f
+            f.seek(0)
+
+            opts = factory.create_from_yaml(f)
+
+        assert opts.a == 3
+        assert opts.b == 2
+
+        with pytest.raises(TypeError):
+            opts.a = 5

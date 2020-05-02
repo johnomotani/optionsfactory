@@ -120,6 +120,21 @@ class OptionsFactory:
         """
         return self.__create_immutable(values)
 
+    def create_from_yaml(self, file_like):
+        """Create an Options instance from an input YAML file
+
+        Parameters
+        ----------
+        file_like : file handle or similar to read from
+            File to read from
+        """
+        return self.create(self._load_yaml(file_like))
+
+    def _load_yaml(self, file_like):
+        import yaml
+
+        return yaml.safe_load(file_like)
+
     def __create_mutable(self, values=None):
         if values is None:
             values = {}
@@ -415,3 +430,23 @@ class MutableOptionsFactory(OptionsFactory):
             Non-default values to be used
         """
         return self._OptionsFactory__create_immutable(values)
+
+    def create_from_yaml(self, file_like):
+        """Create a MutableOptions instance from an input YAML file
+
+        Parameters
+        ----------
+        file_like : file handle or similar to read from
+            File to read from
+        """
+        return self.create(self._load_yaml(file_like))
+
+    def create_immutable_from_yaml(self, file_like):
+        """Create an Options instance (which is immutable) from an input YAML file
+
+        Parameters
+        ----------
+        file_like : file handle or similar to read from
+            File to read from
+        """
+        return self.create_immutable(self._load_yaml(file_like))
