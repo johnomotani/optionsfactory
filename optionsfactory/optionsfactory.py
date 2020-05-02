@@ -53,31 +53,25 @@ class OptionsFactory:
                     )
                 )
         """
-        self.__default_values = {key: WithMeta(value) for key, value in kwargs.items()}
+        self.__defaults = {key: WithMeta(value) for key, value in kwargs.items()}
 
         # Add defaults from *args
         for a in args:
             for key, value in a.items():
-                if key in self.__default_values:
-                    if value != self.__default_values[key]:
+                if key in self.__defaults:
+                    if value != self.__defaults[key]:
                         raise ValueError(
                             f"{key} has been passed more than once with different "
                             f"values"
                         )
-            self.__default_values.update(
-                {key: WithMeta(value) for key, value in a.items()}
-            )
-
-        # Can be flipped (in create()) to True to allow values to be accessed using
-        # __getitem__ or __getattr__
-        self.__allow_access = False
+            self.__defaults.update({key: WithMeta(value) for key, value in a.items()})
 
     @property
     def defaults(self):
         """Get the default values defined for this OptionsFactory
 
         """
-        return deepcopy(self.__default_values)
+        return deepcopy(self.__defaults)
 
     def add(self, **kwargs):
         """Create a more specific version of the factory with extra options. For example,
@@ -98,7 +92,7 @@ class OptionsFactory:
             already exists, but keep the doc, allowed and checks if the option is just a
             new value/expression (not a new WithMeta)
         """
-        new_default_values = deepcopy(self.__default_values)
+        new_default_values = deepcopy(self.__defaults)
         for key, value in kwargs.items():
             if (not isinstance(value, WithMeta)) and key in new_default_values:
                 # just update the default value or expression
@@ -108,69 +102,20 @@ class OptionsFactory:
 
         return OptionsFactory(new_default_values)
 
-    def __getitem__(self, key):
-        if not self.__allow_access:
-            raise AttributeError("Cannot access values from an OptionsFactory")
-
-        # If key is already in __values, then it has a definite value
-        try:
-            return self.__values[key]
-        except KeyError:
-            pass
-
-        # When setting default values, detect circular definitions
-        if not hasattr(self, "_OptionsFactory__key_chain"):
-            chain_start = True
-            self.__key_chain = [key]
-        else:
-            if key in self.__key_chain:
-                # Found a circular definition
-
-                # Tidy up factory state
-                key_chain = self.__key_chain
-                del self.__key_chain
-                self.__allow_access = False
-
-                # Tell the user where the circular definition was
-                index = key_chain.index(key)
-                raise ValueError(
-                    f"Circular definition of default values. At least one of "
-                    f"{key_chain[index:]} must have a definite value"
-                )
-
-            chain_start = False
-            self.__key_chain.append(key)
-
-        self.__values[key] = self.__default_values[key].evaluate_expression(
-            self, name=key
-        )
-
-        if chain_start:
-            # Tidy up temporary member variable
-            del self.__key_chain
-
-        return self.__values[key]
-
-    def __getattr__(self, key):
-        if self.__allow_access:
-            if key in self.__values or key in self.__default_values:
-                return self.__getitem__(key)
-        return super().__getattr__(key)
-
     def __contains__(self, key):
-        return key in self.__default_values
+        return key in self.__defaults
 
     def create(self, values=None):
         """Create an Options instance
 
         The members of the created Options are defined by this
-        OptionsFactory instance. Any values passed in the values dict are used,
+        OptionsFactory instance. Any values passed in the values argument are used,
         and the rest are set from defaults, which can be expressions depending on other
         members.
 
         Parameters
         ----------
-        values : dict, optional
+        values : dict or Options, optional
             Non-default values to be used
         """
         if values is None:
@@ -180,43 +125,156 @@ class OptionsFactory:
         values = deepcopy(dict(values))
 
         # ignore values for keys not in the list of keys defined in the factory
-        for key in list(values.keys()):
-            if key not in self.__default_values:
+        for key in list(values):
+            if key not in self.__defaults:
                 del values[key]
 
-        # check passed-in values
-        self.__values = {
-            key: _checked(value, meta=self.__default_values[key], name=key,)
-            for key, value in values.items()
-        }
+        # Create MutableOptions instance: use to check the values and evaluate defaults
+        mutable_options = OptionsFactory.MutableOptions(values, self.__defaults)
 
         # make a list of the explicitly-set (non-default) values
-        non_default = [k for k in self.__values]
+        non_default = [k for k in values]
 
         # Return new Options instance
-        # Now create all other values from default expressions. Default value
-        # evalutation is implemented in the __getitem__ method so we can pass 'self' to
-        # the default expressions.
-        # Set __allow_access to True to allow internal use of __getitem__, which is
-        # forbidden externally
-        self.__allow_access = True
-        for key in self.__default_values:
-            # Note self.__values[key] is updated in self.__getitem__(key)
-            self[key]
-
-        # Create Options to return
-        new_instance = OptionsFactory.Options(
-            self.__values,
-            {key: self.__default_values[key].doc for key in self.__default_values},
+        return OptionsFactory.Options(
+            dict(mutable_options),
+            {key: self.__defaults[key].doc for key in self.__defaults},
             non_default,
         )
 
-        self.__allow_access = False
+    class MutableOptions:
+        """Provide access to a pre-defined set of options, with default values that may
+        depend on the values of other options
 
-        # Clean up state of the factory
-        del self.__values
+        """
 
-        return new_instance
+        def __init__(self, data, defaults):
+            self.__defaults = defaults
+            self.__data = {
+                key: _checked(value, meta=self.__defaults[key], name=key)
+                for key, value in data.items()
+            }
+            self.__cache = {}
+
+        @property
+        def doc(self):
+            return {key: deepcopy(value.doc) for key, value in self.__defaults.items()}
+
+        def as_table(self):
+            """Returns a string with a formatted table of the settings
+            """
+            return _options_table_string(self)
+
+        def __getitem__(self, key):
+            if key not in self.__defaults:
+                raise KeyError(f"This Options does not contain {key}")
+
+            # If key is already in __cache, then it has a definite value
+            if key in self.__cache:
+                return self.__cache[key]
+
+            # Check if option was in user-set values
+            try:
+                value = self.__data[key]
+            except KeyError:
+                pass
+            else:
+                self.__cache[key] = value
+                return value
+
+            # When setting default values, detect circular definitions
+            if not hasattr(self, "_MutableOptions__key_chain"):
+                chain_start = True
+                self.__key_chain = [key]
+            else:
+                if key in self.__key_chain:
+                    # Found a circular definition
+
+                    # Tidy up object state
+                    key_chain = self.__key_chain
+                    del self.__key_chain
+
+                    # Tell the user where the circular definition was
+                    index = key_chain.index(key)
+                    raise ValueError(
+                        f"Circular definition of default values. At least one of "
+                        f"{key_chain[index:]} must have a definite value"
+                    )
+
+                chain_start = False
+                self.__key_chain.append(key)
+
+            self.__cache[key] = self.__defaults[key].evaluate_expression(self, name=key)
+
+            if chain_start:
+                # Tidy up temporary member variable
+                del self.__key_chain
+
+            return self.__cache[key]
+
+        def __setitem__(self, key, value):
+            # Default values may change, so reset the cache
+            self.__cache = {}
+            self.__data[key] = _checked(value, meta=self.__defaults[key], name=key)
+
+        def __delitem__(self, key):
+            # Default values may change, so reset the cache
+            self.__cache = {}
+            del self.__data[key]
+
+        def __getattr__(self, key):
+            if key in self.__defaults:
+                return self.__getitem__(key)
+            raise AttributeError(f"This MutableOptions has no attribute {key}.")
+
+        def __setattr__(self, key, value):
+            if hasattr(super(), "_MutableOptions__defaults") and key in self.__defaults:
+                self.__setitem__(key, value)
+            super().__setattr__(key, value)
+
+        def __delattr__(self, key):
+            if key in self.__data:
+                return self.__delitem__(key)
+            elif key in self.__defaults:
+                # key is one of the options, but not set so don't need to do anything
+                return
+            super().__delattr__(key)
+
+        def is_default(self, key):
+            if key not in self.__defaults:
+                raise KeyError(f"{key} is not in this Options")
+            return key not in self.__data
+
+        def __contains__(self, key):
+            return key in self.__defaults
+
+        def __len__(self):
+            return len(self.__defaults)
+
+        def __iter__(self):
+            return iter({key: value for key, value in self.items})
+
+        def keys(self):
+            return [key for key in self.__defaults]
+
+        def values(self):
+            return [self[key] for key in self.__defaults]
+
+        def items(self):
+            return zip(self.keys(), self.values())
+
+        def __str__(self):
+            string = "{"
+            for key in self.__defaults:
+                string += f"{key}: {self[key]}"
+                if key not in self.__data:
+                    string += " (default)"
+                string += ", "
+            if len(string) > 1:
+                # remove trailing ", "
+                string = string[:-2]
+            string += "}"
+            return string
 
     class Options:
         """Provide access to a pre-defined set of options, with values fixed when the
@@ -244,7 +302,10 @@ class OptionsFactory:
             return _options_table_string(self)
 
         def __getitem__(self, key):
-            return deepcopy(self.__data.__getitem__(key))
+            try:
+                return deepcopy(self.__data.__getitem__(key))
+            except KeyError:
+                raise KeyError(f"This Options does not contain {key}")
 
         def __setitem__(self, key, value):
             raise TypeError("Options does not allow assigning to keys")
@@ -255,7 +316,10 @@ class OptionsFactory:
                 return super.__getattr__(key)
             if key in self.__data:
                 return self.__getitem__(key)
-            return super.__getattr__(key)
+            try:
+                return super.__getattr__(key)
+            except AttributeError:
+                raise AttributeError(f"This Options has no attribute {key}.")
 
         def __setattr__(self, key, value):
             if self.__frozen:
