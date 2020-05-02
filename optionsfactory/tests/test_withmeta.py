@@ -13,6 +13,30 @@ class TestWithMeta:
         x = WithMeta(3.0, doc="option x")
         assert x.doc == "option x"
 
+    def test_str_default(self):
+        x = WithMeta("b", value_type=float)
+        assert x.evaluate_expression({"b": 4.0}) == 4.0
+        with pytest.raises(KeyError):
+            x.evaluate_expression({"c": 5.0})
+
+    def test_str_default_str_type(self):
+        # Should note use "b" as an option name if value_type=str
+        x = WithMeta("b", value_type=str)
+        assert x.evaluate_expression({"b": "teststr"}) == "b"
+        assert x.evaluate_expression({"c": "teststr2"}) == "b"
+
+    def test_str_default_str_in_type(self):
+        # Should note use "b" as an option name if str is in value_type
+        x = WithMeta("b", value_type=[str, float])
+        assert x.evaluate_expression({"b": "teststr"}) == "b"
+        assert x.evaluate_expression({"c": "teststr2"}) == "b"
+
+    def test_expression_default(self):
+        x = WithMeta(lambda options: options["a"] + options["b"])
+        assert x.evaluate_expression({"a": 6.0, "b": 7.0}) == 13.0
+        with pytest.raises(KeyError):
+            x.evaluate_expression({"c": 6.0, "b": 7.0}) == 13.0
+
     def test_value_type(self):
         x = WithMeta(3.0, value_type=float)
         assert x.value_type is float
