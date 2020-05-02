@@ -1,5 +1,7 @@
 import pytest
 
+from io import StringIO
+
 from ..optionsfactory import MutableOptionsFactory, WithMeta
 from ..checks import is_positive
 
@@ -380,6 +382,35 @@ class TestOptions:
         opts.a = 4
         assert str(opts) == "{a: 4, b: 2 (default)}"
 
+    def test_create_from_yaml(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(a=1, b=2)
+
+        with StringIO() as f:
+            f.write("a: 3\nc: 4")
+
+            # reset to beginning of f
+            f.seek(0)
+
+            opts = factory.create_from_yaml(f)
+
+        assert opts.a == 3
+        assert opts.b == 2
+
+        opts.a = 5
+        assert opts.a == 5
+
+    def test_to_yaml(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(a=1, b=2)
+        opts = factory.create({"a": 3})
+
+        # file_like=None argument makes yaml.dump() return the YAML as a string
+        assert opts.to_yaml(None) == "a: 3\n"
+        assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"
+
 
 class TestMutableOptionsFactoryImmutable:
     def test_defaults(self):
@@ -643,3 +674,32 @@ class TestMutableOptionsFactoryImmutable:
         factory = MutableOptionsFactory(a=1, b=2)
         opts = factory.create_immutable({"b": 3})
         assert str(opts) == "{a: 1 (default), b: 3}"
+
+    def test_create_from_yaml(self, tmp_path):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(a=1, b=2)
+
+        with StringIO() as f:
+            f.write("a: 3\nc: 4")
+
+            # reset to beginning of f
+            f.seek(0)
+
+            opts = factory.create_immutable_from_yaml(f)
+
+        assert opts.a == 3
+        assert opts.b == 2
+
+        with pytest.raises(TypeError):
+            opts.a = 5
+
+    def test_to_yaml(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(a=1, b=2)
+        opts = factory.create_immutable({"a": 3})
+
+        # file_like=None argument makes yaml.dump() return the YAML as a string
+        assert opts.to_yaml(None) == "a: 3\n"
+        assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"

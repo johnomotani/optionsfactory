@@ -14,6 +14,7 @@ setuptools.setup(
         "Handles user-provided options with flexible defaults, documentation and "
         "checking"
     ),
+    extras_require={"yaml": "PyYAML>=5.1"},
     license="OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     long_description=long_description,
     long_description_content_type="text/markdown",

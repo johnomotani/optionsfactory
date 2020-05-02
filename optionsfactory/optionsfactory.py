@@ -120,6 +120,21 @@ class OptionsFactory:
         """
         return self.__create_immutable(values)
 
+    def create_from_yaml(self, file_like):
+        """Create an Options instance from an input YAML file
+
+        Parameters
+        ----------
+        file_like : file handle or similar to read from
+            File to read from
+        """
+        return self.create(self._load_yaml(file_like))
+
+    def _load_yaml(self, file_like):
+        import yaml
+
+        return yaml.safe_load(file_like)
+
     def __create_mutable(self, values=None):
         if values is None:
             values = {}
@@ -168,9 +183,28 @@ class OptionsFactory:
             return {key: deepcopy(value.doc) for key, value in self.__defaults.items()}
 
         def as_table(self):
-            """Returns a string with a formatted table of the settings
+            """Return a string with a formatted table of the settings
             """
             return _options_table_string(self)
+
+        def to_yaml(self, file_like, with_defaults=False):
+            """Save the options to a YAML file
+
+            Save only the non-default options unless with_defaults=True is passed
+
+            Parameters
+            ----------
+            file_like : file handle or similar
+                File to write to
+            with_defaults : bool, default False
+                Save all the options, including default values
+            """
+            import yaml
+
+            if with_defaults:
+                return yaml.dump(dict(self), file_like)
+            else:
+                return yaml.dump(self.__data, file_like)
 
         def __getitem__(self, key):
             if key not in self.__defaults:
@@ -314,9 +348,35 @@ class OptionsFactory:
             return deepcopy(self.__doc)
 
         def as_table(self):
-            """Returns a string with a formatted table of the settings
+            """Return a string with a formatted table of the settings
             """
             return _options_table_string(self)
+
+        def to_yaml(self, file_like, with_defaults=False):
+            """Save the options to a YAML file
+
+            Save only the non-default options unless with_defaults=True is passed
+
+            Parameters
+            ----------
+            file_like : file handle or similar
+                File to write to
+            with_defaults : bool, default False
+                Save all the options, including default values
+            """
+            import yaml
+
+            if with_defaults:
+                return yaml.dump(dict(self), file_like)
+            else:
+                return yaml.dump(
+                    {
+                        key: value
+                        for key, value in self.items()
+                        if not self.is_default(key)
+                    },
+                    file_like,
+                )
 
         def __getitem__(self, key):
             try:
@@ -415,3 +475,23 @@ class MutableOptionsFactory(OptionsFactory):
             Non-default values to be used
         """
         return self._OptionsFactory__create_immutable(values)
+
+    def create_from_yaml(self, file_like):
+        """Create a MutableOptions instance from an input YAML file
+
+        Parameters
+        ----------
+        file_like : file handle or similar to read from
+            File to read from
+        """
+        return self.create(self._load_yaml(file_like))
+
+    def create_immutable_from_yaml(self, file_like):
+        """Create an Options instance (which is immutable) from an input YAML file
+
+        Parameters
+        ----------
+        file_like : file handle or similar to read from
+            File to read from
+        """
+        return self.create_immutable(self._load_yaml(file_like))
