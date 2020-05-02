@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from ._utils import _checked
+from ._utils import _checked, _options_table_string
 from .withmeta import WithMeta
 
 
@@ -238,6 +238,11 @@ class OptionsFactory:
         def doc(self):
             return deepcopy(self.__doc)
 
+        def as_table(self):
+            """Returns a string with a formatted table of the settings
+            """
+            return _options_table_string(self)
+
         def __getitem__(self, key):
             return deepcopy(self.__data.__getitem__(key))
 
@@ -282,22 +287,3 @@ class OptionsFactory:
 
         def __str__(self):
             return str(self.__data)
-
-
-# Helper function to convert options to string
-def optionsTableString(options):
-    """Return a string containing a table of options set"""
-    formatstring = "{:<50}|  {:<30}\n"
-
-    # Header
-    result = (
-        "\nOptions\n=======\n" + formatstring.format("Name", "Value") + "-" * 80 + "\n"
-    )
-
-    # Row for each value
-    for name, value in sorted(options.items()):
-        valuestring = str(value)
-        if options.is_default(name):
-            valuestring += "\t(default)"
-        result += formatstring.format(name, valuestring)
-    return result

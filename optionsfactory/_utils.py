@@ -26,3 +26,21 @@ def _checked(value, *, meta=None, name=None):
                 )
 
     return value
+
+
+def _options_table_string(options):
+    """Return a string containing a table of options set"""
+    formatstring = "{:<50}|  {:<30}\n"
+
+    # Header
+    result = (
+        "\nOptions\n=======\n" + formatstring.format("Name", "Value") + "-" * 80 + "\n"
+    )
+
+    # Row for each value
+    for name, value in sorted(options.items()):
+        valuestring = str(value)
+        if options.is_default(name):
+            valuestring += "\t(default)"
+        result += formatstring.format(name, valuestring)
+    return result
