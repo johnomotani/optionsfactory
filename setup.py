@@ -18,7 +18,7 @@ setuptools.setup(
     license="OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/boutproject/hypnotoad",
+    url="https://github.com/johnomotani/optionsfactory",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
