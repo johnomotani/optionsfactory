@@ -308,13 +308,14 @@ class OptionsFactory:
             return len(self.__defaults)
 
         def __iter__(self):
-            return iter({key: value for key, value in self.items()})
+            return iter(self.keys())
 
         def keys(self):
-            return [key for key in self.__defaults]
+            return self.__defaults.keys()
 
         def values(self):
-            return [self[key] for key in self.__defaults]
+            for key in self:
+                yield self[key]
 
         def items(self):
             return zip(self.keys(), self.values())
@@ -421,13 +422,14 @@ class OptionsFactory:
             return len(self.__data)
 
         def __iter__(self):
-            return iter(deepcopy(self.__data))
+            return iter(self.keys())
 
         def keys(self):
-            return [key for key in self]
+            return self.__data.keys()
 
         def values(self):
-            return [deepcopy(v) for v in self.__data.values()]
+            for v in self.__data.values():
+                yield deepcopy(v)
 
         def items(self):
             return zip(self.keys(), self.values())
