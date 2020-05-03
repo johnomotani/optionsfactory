@@ -8,7 +8,7 @@ from ..checks import is_positive
 from .test_options import as_table_test_str
 
 
-class TestOptions:
+class TestMutableOptions:
     def test_defaults(self):
         factory = MutableOptionsFactory(
             a=1,
