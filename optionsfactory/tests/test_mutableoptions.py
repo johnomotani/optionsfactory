@@ -337,6 +337,38 @@ class TestMutableOptions:
             opts = factory.create({"a": 3.5})
             opts.h
 
+    def test_initialise_from_options(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            b=lambda options: options.a,
+            c=lambda options: options["a"],
+            d=lambda options: options.b + options.c,
+            e=WithMeta("b", value_type=int),
+            f=WithMeta(2.0, doc="option f", value_type=float, allowed=[2.0, 3.0]),
+            g=WithMeta(
+                11,
+                doc="option g",
+                value_type=int,
+                checks=[is_positive, lambda x: x < 20],
+            ),
+            h=WithMeta(
+                lambda options: options.a + 2,
+                doc="option h",
+                value_type=int,
+                checks=[is_positive, lambda x: x < 20],
+            ),
+        )
+
+        opts1 = factory.create({"a": 4, "b": 5, "f": 3.0, "g": 13, "z": 17})
+
+        opts2 = factory.create(opts1)
+
+        assert dict(opts1) == dict(opts2)
+
+        opts3 = factory.create_immutable(opts1)
+
+        assert dict(opts1) == dict(opts3)
+
     def test_circular(self):
         factory = MutableOptionsFactory(
             a=lambda options: options.b, b=lambda options: options.a,
@@ -637,6 +669,38 @@ class TestMutableOptionsFactoryImmutable:
             opts = factory.create_immutable({"a": 21})
         with pytest.raises(TypeError):
             opts = factory.create_immutable({"a": 3.5})
+
+    def test_initialise_from_options(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            b=lambda options: options.a,
+            c=lambda options: options["a"],
+            d=lambda options: options.b + options.c,
+            e=WithMeta("b", value_type=int),
+            f=WithMeta(2.0, doc="option f", value_type=float, allowed=[2.0, 3.0]),
+            g=WithMeta(
+                11,
+                doc="option g",
+                value_type=int,
+                checks=[is_positive, lambda x: x < 20],
+            ),
+            h=WithMeta(
+                lambda options: options.a + 2,
+                doc="option h",
+                value_type=int,
+                checks=[is_positive, lambda x: x < 20],
+            ),
+        )
+
+        opts1 = factory.create_immutable({"a": 4, "b": 5, "f": 3.0, "g": 13, "z": 17})
+
+        opts2 = factory.create_immutable(opts1)
+
+        assert dict(opts1) == dict(opts2)
+
+        opts3 = factory.create(opts1)
+
+        assert dict(opts1) == dict(opts3)
 
     def test_circular(self):
         factory = MutableOptionsFactory(
