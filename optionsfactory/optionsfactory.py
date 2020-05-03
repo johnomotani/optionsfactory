@@ -86,6 +86,13 @@ class OptionsFactory:
         """
         return deepcopy(self.__defaults)
 
+    @property
+    def doc(self):
+        """Get the documentation for the options defined for this OptionsFactory
+
+        """
+        return {key: value.doc for key, value in self.__defaults.items()}
+
     def add(self, **kwargs):
         """Create a more specific version of the factory with extra options. For example,
         may be useful for a subclass like
@@ -183,7 +190,9 @@ class OptionsFactory:
                 del values[key]
 
         # Return new MutableOptions instance
-        return OptionsFactory.MutableOptions(values, self.__defaults, parent=parent)
+        return OptionsFactory.MutableOptions(
+            values, self.__defaults, self.doc, parent=parent
+        )
 
     def __create_immutable(self, values=None):
         # Create MutableOptions instance: use to check the values and evaluate defaults
@@ -198,7 +207,7 @@ class OptionsFactory:
 
         """
 
-        def __init__(self, data, defaults, parent=None):
+        def __init__(self, data, defaults, doc, parent=None):
             self.__defaults = {
                 key: value if not isinstance(value, OptionsFactory) else None
                 for key, value in defaults.items()
@@ -226,10 +235,7 @@ class OptionsFactory:
             for key, value in data.items():
                 self.__data[key] = _checked(value, meta=self.__defaults[key], name=key)
 
-            self.__doc = {
-                key: value.doc if value is not None else self.__data[key].doc
-                for key, value in self.__defaults.items()
-            }
+            self.__doc = doc
 
         @property
         def doc(self):
