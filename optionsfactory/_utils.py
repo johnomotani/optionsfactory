@@ -35,13 +35,36 @@ def _options_table_string(options):
 
     # Header
     result = (
-        "\nOptions\n=======\n" + formatstring.format("Name", "Value") + "-" * 80 + "\n"
+        "\nOptions\n=======\n" + formatstring.format("Name", "Value") + "=" * 80 + "\n"
     )
 
-    # Row for each value
-    for name, value in sorted(options.items()):
-        valuestring = str(value)
-        if options.is_default(name):
-            valuestring = defaultformat.format(valuestring)
-        result += formatstring.format(name, valuestring)
+    def _options_table_subsection(options, subsection_name):
+        result = ""
+
+        # subsection header
+        if subsection_name is not None:
+            result += (
+                "-" * 80 + "\n" + "{:<80}\n".format(subsection_name) + "-" * 80 + "\n"
+            )
+
+        # Row for each value that is not a subsection
+        for name, value in sorted(options.items()):
+            if name in options.get_subsections():
+                continue
+            valuestring = str(value)
+            if options.is_default(name):
+                valuestring = defaultformat.format(valuestring)
+            result += formatstring.format(name, valuestring)
+
+        for name in options.get_subsections():
+            result += _options_table_subsection(
+                options[name],
+                f"{str(subsection_name) + ':' if subsection_name is not None else ''}"
+                f"{name}",
+            )
+
+        return result
+
+    result += _options_table_subsection(options, None)
+
     return result

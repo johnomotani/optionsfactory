@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from ._utils import _checked, _options_table_string
 from .withmeta import WithMeta
@@ -53,7 +53,12 @@ class OptionsFactory:
                     )
                 )
         """
-        self.__defaults = {key: WithMeta(value) for key, value in kwargs.items()}
+        self.__defaults = {}
+        for key, value in kwargs.items():
+            if isinstance(value, OptionsFactory):
+                self.__defaults[key] = value
+            else:
+                self.__defaults[key] = WithMeta(value)
 
         # Add defaults from *args
         for a in args:
@@ -69,7 +74,10 @@ class OptionsFactory:
                             f"{key} has been passed more than once with different "
                             f"values"
                         )
-            self.__defaults.update({key: WithMeta(value) for key, value in a.items()})
+                if isinstance(value, OptionsFactory):
+                    self.__defaults[key] = value
+                else:
+                    self.__defaults[key] = WithMeta(value)
 
     @property
     def defaults(self):
@@ -140,7 +148,7 @@ class OptionsFactory:
 
         return yaml.safe_load(file_like)
 
-    def __create_mutable(self, values=None):
+    def __create_mutable(self, values=None, parent=None):
         if values is None:
             values = {}
 
@@ -153,21 +161,14 @@ class OptionsFactory:
                 del values[key]
 
         # Return new MutableOptions instance
-        return OptionsFactory.MutableOptions(values, self.__defaults)
+        return OptionsFactory.MutableOptions(values, self.__defaults, parent=parent)
 
     def __create_immutable(self, values=None):
         # Create MutableOptions instance: use to check the values and evaluate defaults
         mutable_options = self.__create_mutable(values)
 
-        # make a list of the explicitly-set (non-default) values
-        is_default = {key: mutable_options.is_default(key) for key in mutable_options}
-
         # Return new Options instance
-        return OptionsFactory.Options(
-            dict(mutable_options),
-            {key: self.__defaults[key].doc for key in self.__defaults},
-            is_default,
-        )
+        return OptionsFactory.Options(mutable_options)
 
     class MutableOptions:
         """Provide access to a pre-defined set of options, with default values that may
@@ -175,14 +176,38 @@ class OptionsFactory:
 
         """
 
-        def __init__(self, data, defaults):
-            self.__defaults = defaults
-            self.__data = {
-                key: _checked(value, meta=self.__defaults[key], name=key)
-                for key, value in data.items()
+        def __init__(self, data, defaults, parent=None):
+            self.__defaults = {
+                key: value if not isinstance(value, OptionsFactory) else None
+                for key, value in defaults.items()
             }
-            self.__doc = {key: value.doc for key, value in self.__defaults.items()}
             self.__cache = {}
+            self.__parent = parent
+
+            # don't modify input data
+            data = copy(data)
+
+            self.__data = {}
+            # Add subsections first
+            for subsection in self.get_subsections():
+                if subsection in data:
+                    subsection_data = data[subsection]
+                    del data[subsection]
+                else:
+                    subsection_data = {}
+                self.__data[subsection] = defaults[
+                    subsection
+                ]._OptionsFactory__create_mutable(subsection_data, parent=self)
+
+            # Add values in this section second - now 'data' contains only values, not
+            # subsections
+            for key, value in data.items():
+                self.__data[key] = _checked(value, meta=self.__defaults[key], name=key)
+
+            self.__doc = {
+                key: value.doc if value is not None else self.__data[key].doc
+                for key, value in self.__defaults.items()
+            }
 
         @property
         def doc(self):
@@ -211,6 +236,21 @@ class OptionsFactory:
                 return yaml.dump(dict(self), file_like)
             else:
                 return yaml.dump(self.__data, file_like)
+
+        def get_subsections(self):
+            """
+            Iterator over the subsections in this MutableOptions
+            """
+            for key, value in self.__defaults.items():
+                # None marks subsections in self.__defaults - all other values are
+                # WithMeta objects
+                if value is None:
+                    yield key
+
+        def __clear_cache(self):
+            self.__cache = {}
+            if self.__parent is not None:
+                self.__parent.__clear_cache()
 
         def __getitem__(self, key):
             if key not in self.__defaults:
@@ -266,7 +306,7 @@ class OptionsFactory:
                     f"options"
                 )
             # Default values may change, so reset the cache
-            self.__cache = {}
+            self.__clear_cache()
             self.__data[key] = _checked(value, meta=self.__defaults[key], name=key)
 
         def __delitem__(self, key):
@@ -300,6 +340,9 @@ class OptionsFactory:
         def is_default(self, key):
             if key not in self.__defaults:
                 raise KeyError(f"{key} is not in this Options")
+            value = self[key]
+            if isinstance(value, OptionsFactory.MutableOptions):
+                return {k: value.is_default(k) for k in value}
             return key not in self.__data
 
         def __contains__(self, key):
@@ -324,8 +367,9 @@ class OptionsFactory:
         def __str__(self):
             string = "{"
             for key in self.__defaults:
-                string += f"{key}: {self[key]}"
-                if key not in self.__data:
+                value = self[key]
+                string += f"{key}: {value}"
+                if self.is_default(key) is True:
                     string += " (default)"
                 string += ", "
             if len(string) > 1:
@@ -342,10 +386,20 @@ class OptionsFactory:
 
         __frozen = False
 
-        def __init__(self, data, doc, is_default):
-            self.__data = data
-            self.__doc = doc
-            self.__is_default = is_default
+        def __init__(self, mutable_options):
+            self.__data = {}
+            for key, value in mutable_options.items():
+                if isinstance(value, OptionsFactory.MutableOptions):
+                    self.__data[key] = OptionsFactory.Options(mutable_options[key])
+                else:
+                    self.__data[key] = deepcopy(value)
+
+            self.__doc = deepcopy(mutable_options.doc)
+
+            # make a dict of the explicitly-set (non-default) values
+            self.__is_default = {
+                key: mutable_options.is_default(key) for key in mutable_options
+            }
 
             # Set self.__frozen to True to prevent attributes being changed
             self.__frozen = True
@@ -384,6 +438,14 @@ class OptionsFactory:
                     },
                     file_like,
                 )
+
+        def get_subsections(self):
+            """
+            Iterator over the subsections in this Options
+            """
+            for key, value in self.__data.items():
+                if isinstance(value, OptionsFactory.Options):
+                    yield key
 
         def __getitem__(self, key):
             try:
@@ -439,7 +501,7 @@ class OptionsFactory:
             string = "{"
             for key in self.__data:
                 string += f"{key}: {self[key]}"
-                if self.is_default(key):
+                if self.is_default(key) is True:
                     string += " (default)"
                 string += ", "
             if len(string) > 1:

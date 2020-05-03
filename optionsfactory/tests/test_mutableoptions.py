@@ -5,7 +5,7 @@ from io import StringIO
 from ..optionsfactory import MutableOptionsFactory, WithMeta
 from ..checks import is_positive
 
-from .test_options import as_table_test_str
+from .test_options import as_table_test_str, as_table_test_str_nested
 
 
 class TestMutableOptions:
@@ -369,6 +369,16 @@ class TestMutableOptions:
 
         assert dict(opts1) == dict(opts3)
 
+    def test_values_nested(self):
+        factory = MutableOptionsFactory(a=1, subsection=MutableOptionsFactory(b=2), c=3)
+        opts = factory.create({})
+        values_iter = opts.values()
+        assert next(values_iter) == 1
+        value = next(values_iter)
+        assert isinstance(value, MutableOptionsFactory.MutableOptions)
+        assert dict(value) == {"b": 2}
+        assert next(values_iter) == 3
+
     def test_circular(self):
         factory = MutableOptionsFactory(
             a=lambda options: options.b, b=lambda options: options.a,
@@ -404,6 +414,18 @@ class TestMutableOptions:
         opts = factory.create({"b": 3})
         assert opts.as_table() == as_table_test_str
 
+    def test_as_table_nested(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            b=2,
+            subsection1=MutableOptionsFactory(
+                c=4, subsubsection=MutableOptionsFactory(d=5)
+            ),
+            subsection2=MutableOptionsFactory(e=6),
+        )
+        opts = factory.create({"b": 3})
+        assert opts.as_table() == as_table_test_str_nested
+
     def test_str(self):
         factory = MutableOptionsFactory(a=1, b=2)
         opts = factory.create({"b": 3})
@@ -412,6 +434,21 @@ class TestMutableOptions:
         del opts.b
         opts.a = 4
         assert str(opts) == "{a: 4, b: 2 (default)}"
+
+    def test_str_nested(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            subsection=MutableOptionsFactory(
+                c=3, subsubsection=MutableOptionsFactory(d=4)
+            ),
+            b=2,
+        )
+        opts = factory.create({"b": 5, "subsection": {"subsubsection": {"d": 6}}})
+        assert (
+            str(opts)
+            == "{a: 1 (default), subsection: {c: 3 (default), subsubsection: {d: 6}}, "
+            "b: 5}"
+        )
 
     def test_create_from_yaml(self):
         pytest.importorskip("yaml")
@@ -441,6 +478,176 @@ class TestMutableOptions:
         # file_like=None argument makes yaml.dump() return the YAML as a string
         assert opts.to_yaml(None) == "a: 3\n"
         assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"
+
+    def test_nested_defaults(self):
+        factory = MutableOptionsFactory(
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f,
+            subsection1=MutableOptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=MutableOptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=MutableOptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create({})
+
+        assert opts.a == 1
+        assert opts.b == 10
+        assert opts.subsection1.c == 3
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 7
+
+        opts.subsection2.subsubsection.f = 8
+
+        assert opts.a == 1
+        assert opts.b == 11
+        assert opts.subsection1.c == 3
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+
+    def test_nested_initialise(self):
+        factory = MutableOptionsFactory(
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f,
+            subsection1=MutableOptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=MutableOptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=MutableOptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create(
+            {
+                "a": 2,
+                "subsection1": {"c": 7},
+                "subsection2": {"subsubsection": {"f": 8}},
+            }
+        )
+
+        assert opts.a == 2
+        assert opts.b == 15
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+
+        opts.subsection2.subsubsection.f = 9
+
+        assert opts.a == 2
+        assert opts.b == 16
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 9
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+
+    def test_nested_with_arg_initialise(self):
+        factory2 = MutableOptionsFactory(
+            x=WithMeta(11, doc="option x"),
+            y=12,
+            subsection3=MutableOptionsFactory(z=WithMeta(13, doc="option z")),
+        )
+
+        factory = MutableOptionsFactory(
+            factory2,
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f
+            + options.subsection3.z,
+            subsection1=MutableOptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=MutableOptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=MutableOptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create(
+            {
+                "a": 2,
+                "x": 21,
+                "subsection1": {"c": 7},
+                "subsection2": {"subsubsection": {"f": 8}},
+                "subsection3": {"z": 23},
+            }
+        )
+
+        assert opts.a == 2
+        assert opts.b == 38
+        assert opts.x == 21
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+        assert opts.subsection3.z == 23
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["x"] == "option x"
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+        assert opts.subsection3.doc["z"] == "option z"
+
+        opts.a = 30
+        opts.subsection3.z = 42
+
+        assert opts.a == 30
+        assert opts.b == 57
+        assert opts.x == 21
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+        assert opts.subsection3.z == 42
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["x"] == "option x"
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+        assert opts.subsection3.doc["z"] == "option z"
 
 
 class TestMutableOptionsFactoryImmutable:
@@ -702,6 +909,16 @@ class TestMutableOptionsFactoryImmutable:
 
         assert dict(opts1) == dict(opts3)
 
+    def test_values_nested(self):
+        factory = MutableOptionsFactory(a=1, subsection=MutableOptionsFactory(b=2), c=3)
+        opts = factory.create_immutable({})
+        values_iter = opts.values()
+        assert next(values_iter) == 1
+        value = next(values_iter)
+        assert isinstance(value, MutableOptionsFactory.Options)
+        assert dict(value) == {"b": 2}
+        assert next(values_iter) == 3
+
     def test_circular(self):
         factory = MutableOptionsFactory(
             a=lambda options: options.b, b=lambda options: options.a,
@@ -732,10 +949,39 @@ class TestMutableOptionsFactoryImmutable:
         opts = factory.create_immutable({"b": 3})
         assert opts.as_table() == as_table_test_str
 
+    def test_as_table_nested(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            b=2,
+            subsection1=MutableOptionsFactory(
+                c=4, subsubsection=MutableOptionsFactory(d=5)
+            ),
+            subsection2=MutableOptionsFactory(e=6),
+        )
+        opts = factory.create_immutable({"b": 3})
+        assert opts.as_table() == as_table_test_str_nested
+
     def test_str(self):
         factory = MutableOptionsFactory(a=1, b=2)
         opts = factory.create_immutable({"b": 3})
         assert str(opts) == "{a: 1 (default), b: 3}"
+
+    def test_str_nested(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            subsection=MutableOptionsFactory(
+                c=3, subsubsection=MutableOptionsFactory(d=4)
+            ),
+            b=2,
+        )
+        opts = factory.create_immutable(
+            {"b": 5, "subsection": {"subsubsection": {"d": 6}}}
+        )
+        assert (
+            str(opts)
+            == "{a: 1 (default), subsection: {c: 3 (default), subsubsection: {d: 6}}, "
+            "b: 5}"
+        )
 
     def test_create_from_yaml(self, tmp_path):
         pytest.importorskip("yaml")
@@ -765,3 +1011,148 @@ class TestMutableOptionsFactoryImmutable:
         # file_like=None argument makes yaml.dump() return the YAML as a string
         assert opts.to_yaml(None) == "a: 3\n"
         assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"
+
+    def test_nested_defaults(self):
+        factory = MutableOptionsFactory(
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f,
+            subsection1=MutableOptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=MutableOptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=MutableOptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create_immutable({})
+
+        assert opts.a == 1
+        assert opts.b == 10
+        assert opts.subsection1.c == 3
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 7
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+
+    def test_nested_initialise(self):
+        factory = MutableOptionsFactory(
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f,
+            subsection1=MutableOptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=MutableOptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=MutableOptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create_immutable(
+            {
+                "a": 2,
+                "subsection1": {"c": 7},
+                "subsection2": {"subsubsection": {"f": 8}},
+            }
+        )
+
+        assert opts.a == 2
+        assert opts.b == 15
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+
+        with pytest.raises(TypeError):
+            opts.a = 3
+        with pytest.raises(TypeError):
+            opts.subsection1.d = 3
+        with pytest.raises(TypeError):
+            opts.subsection2.e = 3
+        with pytest.raises(TypeError):
+            opts.subsection2.subsubsection.f = 3
+
+    def test_nested_with_arg_initialise(self):
+        factory2 = MutableOptionsFactory(
+            x=WithMeta(11, doc="option x"),
+            y=12,
+            subsection3=MutableOptionsFactory(z=WithMeta(13, doc="option z")),
+        )
+
+        factory = MutableOptionsFactory(
+            factory2,
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f
+            + options.subsection3.z,
+            subsection1=MutableOptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=MutableOptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=MutableOptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create_immutable(
+            {
+                "a": 2,
+                "x": 21,
+                "subsection1": {"c": 7},
+                "subsection2": {"subsubsection": {"f": 8}},
+                "subsection3": {"z": 23},
+            }
+        )
+
+        assert opts.a == 2
+        assert opts.b == 38
+        assert opts.x == 21
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+        assert opts.subsection3.z == 23
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["x"] == "option x"
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+        assert opts.subsection3.doc["z"] == "option z"
+
+        with pytest.raises(TypeError):
+            opts.a = 3
+        with pytest.raises(TypeError):
+            opts.subsection1.d = 3
+        with pytest.raises(TypeError):
+            opts.subsection2.e = 3
+        with pytest.raises(TypeError):
+            opts.subsection2.subsubsection.f = 3
+        with pytest.raises(TypeError):
+            opts.subsection3.z = 3

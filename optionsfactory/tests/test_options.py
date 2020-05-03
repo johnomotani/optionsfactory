@@ -10,9 +10,30 @@ as_table_test_str = (
     "\nOptions\n"
     "=======\n"
     "Name                                              |  Value                      \n"
-    "--------------------------------------------------------------------------------\n"
+    "================================================================================\n"
     "a                                                 |  1               (default)  \n"
     "b                                                 |  3                          \n"
+)
+
+as_table_test_str_nested = (
+    "\nOptions\n"
+    "=======\n"
+    "Name                                              |  Value                      \n"
+    "================================================================================\n"
+    "a                                                 |  1               (default)  \n"
+    "b                                                 |  3                          \n"
+    "--------------------------------------------------------------------------------\n"
+    "subsection1                                                                     \n"
+    "--------------------------------------------------------------------------------\n"
+    "c                                                 |  4               (default)  \n"
+    "--------------------------------------------------------------------------------\n"
+    "subsection1:subsubsection                                                       \n"
+    "--------------------------------------------------------------------------------\n"
+    "d                                                 |  5               (default)  \n"
+    "--------------------------------------------------------------------------------\n"
+    "subsection2                                                                     \n"
+    "--------------------------------------------------------------------------------\n"
+    "e                                                 |  6               (default)  \n"
 )
 
 
@@ -271,6 +292,16 @@ class TestOptions:
 
         assert dict(opts1) == dict(opts2)
 
+    def test_values_nested(self):
+        factory = OptionsFactory(a=1, subsection=OptionsFactory(b=2), c=3)
+        opts = factory.create({})
+        values_iter = opts.values()
+        assert next(values_iter) == 1
+        value = next(values_iter)
+        assert isinstance(value, OptionsFactory.Options)
+        assert dict(value) == {"b": 2}
+        assert next(values_iter) == 3
+
     def test_circular(self):
         factory = OptionsFactory(
             a=lambda options: options.b, b=lambda options: options.a,
@@ -301,10 +332,31 @@ class TestOptions:
         opts = factory.create({"b": 3})
         assert opts.as_table() == as_table_test_str
 
+    def test_as_table_nested(self):
+        factory = OptionsFactory(
+            a=1,
+            b=2,
+            subsection1=OptionsFactory(c=4, subsubsection=OptionsFactory(d=5)),
+            subsection2=OptionsFactory(e=6),
+        )
+        opts = factory.create({"b": 3})
+        assert opts.as_table() == as_table_test_str_nested
+
     def test_str(self):
         factory = OptionsFactory(a=1, b=2)
         opts = factory.create({"b": 3})
         assert str(opts) == "{a: 1 (default), b: 3}"
+
+    def test_str_nested(self):
+        factory = OptionsFactory(
+            a=1, subsection=OptionsFactory(c=3, subsubsection=OptionsFactory(d=4)), b=2,
+        )
+        opts = factory.create({"b": 5, "subsection": {"subsubsection": {"d": 6}}})
+        assert (
+            str(opts)
+            == "{a: 1 (default), subsection: {c: 3 (default), subsubsection: {d: 6}}, "
+            "b: 5}"
+        )
 
     def test_create_from_yaml(self):
         pytest.importorskip("yaml")
@@ -334,3 +386,135 @@ class TestOptions:
         # file_like=None argument makes yaml.dump() return the YAML as a string
         assert opts.to_yaml(None) == "a: 3\n"
         assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"
+
+    def test_nested_defaults(self):
+        factory = OptionsFactory(
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f,
+            subsection1=OptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=OptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=OptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create({})
+
+        assert opts.a == 1
+        assert opts.b == 10
+        assert opts.subsection1.c == 3
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 7
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+
+    def test_nested_initialise(self):
+        factory = OptionsFactory(
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f,
+            subsection1=OptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=OptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=OptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create(
+            {
+                "a": 2,
+                "subsection1": {"c": 7},
+                "subsection2": {"subsubsection": {"f": 8}},
+            }
+        )
+
+        assert opts.a == 2
+        assert opts.b == 15
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+
+        with pytest.raises(TypeError):
+            opts.a = 3
+        with pytest.raises(TypeError):
+            opts.subsection1.d = 3
+        with pytest.raises(TypeError):
+            opts.subsection2.e = 3
+
+    def test_nested_with_arg_initialise(self):
+        factory2 = OptionsFactory(
+            x=WithMeta(11, doc="option x"),
+            y=12,
+            subsection3=OptionsFactory(z=WithMeta(13, doc="option z")),
+        )
+
+        factory = OptionsFactory(
+            factory2,
+            a=WithMeta(1, doc="option a"),
+            b=lambda options: options.subsection1.c
+            + options.subsection2.subsubsection.f
+            + options.subsection3.z,
+            subsection1=OptionsFactory(c=WithMeta(3, doc="option 1c"), d=4),
+            subsection2=OptionsFactory(
+                c=WithMeta(5, doc="option 2c"),
+                e=6,
+                subsubsection=OptionsFactory(f=WithMeta(7, doc="option f")),
+            ),
+        )
+
+        opts = factory.create(
+            {
+                "a": 2,
+                "x": 21,
+                "subsection1": {"c": 7},
+                "subsection2": {"subsubsection": {"f": 8}},
+                "subsection3": {"z": 23},
+            }
+        )
+
+        assert opts.a == 2
+        assert opts.b == 38
+        assert opts.x == 21
+        assert opts.subsection1.c == 7
+        assert opts.subsection1.d == 4
+        assert opts.subsection2.c == 5
+        assert opts.subsection2.e == 6
+        assert opts.subsection2.subsubsection.f == 8
+        assert opts.subsection3.z == 23
+
+        assert opts.doc["a"] == "option a"
+        assert opts.doc["b"] is None
+        assert opts.doc["x"] == "option x"
+        assert opts.doc["subsection1"]["c"] == "option 1c"
+        assert opts.subsection1.doc["c"] == "option 1c"
+        assert opts.doc["subsection1"]["d"] is None
+        assert opts.doc["subsection2"]["c"] == "option 2c"
+        assert opts.subsection2.doc["c"] == "option 2c"
+        assert opts.doc["subsection2"]["e"] is None
+        assert opts.subsection2.subsubsection.doc["f"] == "option f"
+        assert opts.subsection3.doc["z"] == "option z"
