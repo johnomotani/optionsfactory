@@ -391,6 +391,10 @@ class OptionsFactory:
             for key in self.__defaults:
                 value = self[key]
                 string += f"{key}: {value}"
+
+                # Using 'is True' here means we only append ' (default)' to options, not
+                # sections: if 'key' is a section then self.is_default(key) will return
+                # a dict
                 if self.is_default(key) is True:
                     string += " (default)"
                 string += ", "
@@ -523,6 +527,10 @@ class OptionsFactory:
             string = "{"
             for key in self.__data:
                 string += f"{key}: {self[key]}"
+
+                # Using 'is True' here means we only append ' (default)' to options, not
+                # sections: if 'key' is a section then self.is_default(key) will return
+                # a dict
                 if self.is_default(key) is True:
                     string += " (default)"
                 string += ", "
