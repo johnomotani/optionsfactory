@@ -180,6 +180,15 @@ class TestMutableOptions:
         assert opts.g == 11
         assert opts.h == 3
 
+        assert factory.doc["a"] is None
+        assert factory.doc["b"] is None
+        assert factory.doc["c"] is None
+        assert factory.doc["d"] is None
+        assert factory.doc["e"] is None
+        assert factory.doc["f"] == "option f"
+        assert factory.doc["g"] == "option g"
+        assert factory.doc["h"] == "option h"
+
     def test_initialise(self):
         factory = MutableOptionsFactory(
             a=1,

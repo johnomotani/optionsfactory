@@ -135,6 +135,15 @@ class TestOptions:
             ]
         )
 
+        assert factory.doc["a"] is None
+        assert factory.doc["b"] is None
+        assert factory.doc["c"] is None
+        assert factory.doc["d"] is None
+        assert factory.doc["e"] is None
+        assert factory.doc["f"] == "option f"
+        assert factory.doc["g"] == "option g"
+        assert factory.doc["h"] == "option h"
+
     def test_initialise(self):
         factory = OptionsFactory(
             a=1,
