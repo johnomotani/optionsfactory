@@ -57,7 +57,12 @@ class OptionsFactory:
 
         # Add defaults from *args
         for a in args:
-            for key, value in a.items():
+            if not isinstance(a, OptionsFactory):
+                raise ValueError(
+                    f"Positional arguments to OptionsFactory.__init__() must be "
+                    f"OptionsFactory instances, was passed a {type(a)}"
+                )
+            for key, value in a.defaults.items():
                 if key in self.__defaults:
                     if value != self.__defaults[key]:
                         raise ValueError(
