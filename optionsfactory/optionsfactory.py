@@ -240,6 +240,32 @@ class OptionsFactory:
             """
             return _options_table_string(self)
 
+        def to_dict(self, with_defaults=True):
+            """Convert the MutableOptions object to a dict
+
+            Parameters
+            ----------
+            with_defaults : bool, default True
+                Include the default values in the returned dict?
+            """
+            if with_defaults:
+                return {
+                    key: value
+                    if not isinstance(value, OptionsFactory.MutableOptions)
+                    else value.to_dict(with_defaults)
+                    for key, value in self.items()
+                }
+            else:
+                return {
+                    key: value
+                    if not isinstance(value, OptionsFactory.MutableOptions)
+                    else value.to_dict(with_defaults)
+                    for key, value in self.items()
+                    # Use 'is not True' so we include subsections, for which
+                    # self.is_default(key) returns a dict
+                    if self.is_default(key) is not True
+                }
+
         def to_yaml(self, file_like, with_defaults=False):
             """Save the options to a YAML file
 
@@ -254,10 +280,7 @@ class OptionsFactory:
             """
             import yaml
 
-            if with_defaults:
-                return yaml.dump(dict(self), file_like)
-            else:
-                return yaml.dump(self.__data, file_like)
+            return yaml.dump(self.to_dict(with_defaults), file_like)
 
         def get_subsections(self):
             """
@@ -439,6 +462,32 @@ class OptionsFactory:
             """
             return _options_table_string(self)
 
+        def to_dict(self, with_defaults=True):
+            """Convert the MutableOptions object to a dict
+
+            Parameters
+            ----------
+            with_defaults : bool, default True
+                Include the default values in the returned dict?
+            """
+            if with_defaults:
+                return {
+                    key: value
+                    if not isinstance(value, OptionsFactory.Options)
+                    else value.to_dict(with_defaults)
+                    for key, value in self.items()
+                }
+            else:
+                return {
+                    key: value
+                    if not isinstance(value, OptionsFactory.Options)
+                    else value.to_dict(with_defaults)
+                    for key, value in self.items()
+                    # Use 'is not True' so we include subsections, for which
+                    # self.is_default(key) returns a dict
+                    if self.is_default(key) is not True
+                }
+
         def to_yaml(self, file_like, with_defaults=False):
             """Save the options to a YAML file
 
@@ -453,17 +502,7 @@ class OptionsFactory:
             """
             import yaml
 
-            if with_defaults:
-                return yaml.dump(dict(self), file_like)
-            else:
-                return yaml.dump(
-                    {
-                        key: value
-                        for key, value in self.items()
-                        if not self.is_default(key)
-                    },
-                    file_like,
-                )
+            return yaml.dump(self.to_dict(with_defaults), file_like)
 
         def get_subsections(self):
             """

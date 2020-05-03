@@ -576,6 +576,37 @@ class TestMutableOptions:
         opts.a = 5
         assert opts.a == 5
 
+    def test_create_from_yaml_nested(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(
+            a=1,
+            b=2,
+            subsection=MutableOptionsFactory(
+                c=3, subsubsection=MutableOptionsFactory(d=4)
+            ),
+            e=5,
+        )
+
+        with StringIO() as f:
+            f.write(
+                "a: 11\ne: 15\nsubsection:\n  c: 13\n  subsubsection:\n    d: 14\nb: 12"
+            )
+
+            # reset to beginning of f
+            f.seek(0)
+
+            opts = factory.create_from_yaml(f)
+
+        assert opts.a == 11
+        assert opts.b == 12
+        assert opts.subsection.c == 13
+        assert opts.subsection.subsubsection.d == 14
+        assert opts.e == 15
+
+        opts.a = 5
+        assert opts.a == 5
+
     def test_to_yaml(self):
         pytest.importorskip("yaml")
 
@@ -585,6 +616,32 @@ class TestMutableOptions:
         # file_like=None argument makes yaml.dump() return the YAML as a string
         assert opts.to_yaml(None) == "a: 3\n"
         assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"
+
+    def test_to_yaml_nested(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(
+            a=1,
+            b=2,
+            subsection=MutableOptionsFactory(
+                c=3, subsubsection=MutableOptionsFactory(d=4)
+            ),
+            e=5,
+        )
+
+        opts = factory.create(
+            {"a": 11, "subsection": {"c": 13, "subsubsection": {"d": 14}}}
+        )
+
+        assert (
+            opts.to_yaml(None)
+            == "a: 11\nsubsection:\n  c: 13\n  subsubsection:\n    d: 14\n"
+        )
+
+        assert (
+            opts.to_yaml(None, True)
+            == "a: 11\nb: 2\ne: 5\nsubsection:\n  c: 13\n  subsubsection:\n    d: 14\n"
+        )
 
     def test_nested_defaults(self):
         factory = MutableOptionsFactory(
@@ -1216,6 +1273,37 @@ class TestMutableOptionsFactoryImmutable:
         with pytest.raises(TypeError):
             opts.a = 5
 
+    def test_create_from_yaml_nested(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(
+            a=1,
+            b=2,
+            subsection=MutableOptionsFactory(
+                c=3, subsubsection=MutableOptionsFactory(d=4)
+            ),
+            e=5,
+        )
+
+        with StringIO() as f:
+            f.write(
+                "a: 11\ne: 15\nsubsection:\n  c: 13\n  subsubsection:\n    d: 14\nb: 12"
+            )
+
+            # reset to beginning of f
+            f.seek(0)
+
+            opts = factory.create_immutable_from_yaml(f)
+
+        assert opts.a == 11
+        assert opts.b == 12
+        assert opts.subsection.c == 13
+        assert opts.subsection.subsubsection.d == 14
+        assert opts.e == 15
+
+        with pytest.raises(TypeError):
+            opts.a = 5
+
     def test_to_yaml(self):
         pytest.importorskip("yaml")
 
@@ -1225,6 +1313,32 @@ class TestMutableOptionsFactoryImmutable:
         # file_like=None argument makes yaml.dump() return the YAML as a string
         assert opts.to_yaml(None) == "a: 3\n"
         assert opts.to_yaml(None, True) == "a: 3\nb: 2\n"
+
+    def test_to_yaml_nested(self):
+        pytest.importorskip("yaml")
+
+        factory = MutableOptionsFactory(
+            a=1,
+            b=2,
+            subsection=MutableOptionsFactory(
+                c=3, subsubsection=MutableOptionsFactory(d=4)
+            ),
+            e=5,
+        )
+
+        opts = factory.create_immutable(
+            {"a": 11, "subsection": {"c": 13, "subsubsection": {"d": 14}}}
+        )
+
+        assert (
+            opts.to_yaml(None)
+            == "a: 11\nsubsection:\n  c: 13\n  subsubsection:\n    d: 14\n"
+        )
+
+        assert (
+            opts.to_yaml(None, True)
+            == "a: 11\nb: 2\ne: 5\nsubsection:\n  c: 13\n  subsubsection:\n    d: 14\n"
+        )
 
     def test_nested_defaults(self):
         factory = MutableOptionsFactory(
