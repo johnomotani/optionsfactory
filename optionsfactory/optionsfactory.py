@@ -107,13 +107,35 @@ class OptionsFactory:
         """
         new_default_values = deepcopy(self.__defaults)
         for key, value in kwargs.items():
-            if (not isinstance(value, WithMeta)) and key in new_default_values:
+            if key in new_default_values and isinstance(
+                new_default_values[key], OptionsFactory
+            ):
+                if isinstance(value, OptionsFactory):
+                    raise ValueError(
+                        f"Updating the section {key} in OptionsFactory, but was passed "
+                        f"an OptionsFactory. This is forbidden as options from the new "
+                        f"OptionsFactory might unexpectedly overwrite metadata in the "
+                        f"existing section. Pass a dict instead to update {key}."
+                    )
+                new_default_values[key] = new_default_values[key].add(**value)
+            elif isinstance(value, OptionsFactory):
+                if key in new_default_values:
+                    raise ValueError(
+                        f"Passing an OptionsFactory to OptionsFactory.add() creates a "
+                        f"new section, but the option {key} already exists"
+                    )
+                new_default_values[key] = value
+            elif isinstance(value, WithMeta):
+                new_default_values[key] = value
+            elif key in new_default_values:
                 # just update the default value or expression
                 new_default_values[key].value = value
             else:
-                new_default_values[key] = value
+                new_default_values[key] = WithMeta(value)
 
-        return OptionsFactory(new_default_values)
+        # Use type(self) so that OptionsFactory returns an OptionsFactory but
+        # MutableOptionsFactory returns a MutableOptionsFactory
+        return type(self)(**new_default_values)
 
     def __contains__(self, key):
         return key in self.__defaults

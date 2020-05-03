@@ -327,6 +327,113 @@ class TestOptions:
         assert sorted(opts.values()) == sorted([3, 3])
         assert sorted(opts.items()) == sorted([("a", 3), ("b", 3)])
 
+    def test_add_defaults(self):
+        subfactory = OptionsFactory(
+            d=WithMeta(4, doc="option d1"),
+            e=WithMeta(5, doc="option e1"),
+            f=WithMeta(6, doc="option f1"),
+        )
+        factory = OptionsFactory(
+            a=WithMeta(1, doc="option a1"),
+            b=WithMeta(2, doc="option b1"),
+            c=WithMeta(3, doc="option c1"),
+            subsection=subfactory,
+        )
+
+        factory2 = factory.add(
+            b=12,
+            c=WithMeta(13, doc="option c2"),
+            g=17,
+            subsection={"d": 14, "e": WithMeta(15, doc="option e2"), "h": 18},
+            subsection2=OptionsFactory(i=WithMeta(19, doc="option i2")),
+        )
+
+        opts = factory2.create({})
+
+        assert opts.a == 1
+        assert opts.b == 12
+        assert opts.c == 13
+        assert opts.subsection.d == 14
+        assert opts.subsection.e == 15
+        assert opts.subsection.f == 6
+        assert opts.g == 17
+        assert opts.subsection.h == 18
+        assert opts.subsection2.i == 19
+
+        assert opts.doc["a"] == "option a1"
+        assert opts.doc["b"] == "option b1"
+        assert opts.doc["c"] == "option c2"
+        assert opts.doc["subsection"]["d"] == "option d1"
+        assert opts.doc["subsection"]["e"] == "option e2"
+        assert opts.doc["subsection"]["f"] == "option f1"
+        assert opts.doc["g"] is None
+        assert opts.doc["subsection"]["h"] is None
+        assert opts.doc["subsection2"]["i"] == "option i2"
+
+        with pytest.raises(ValueError, match="Passing an OptionsFactory"):
+            factory.add(a=OptionsFactory(j=2))
+
+        with pytest.raises(ValueError, match="Updating the section"):
+            factory.add(subsection=OptionsFactory(d=14, e=15, f=16))
+
+    def test_add_initialise(self):
+        subfactory = OptionsFactory(
+            d=WithMeta(4, doc="option d1"),
+            e=WithMeta(5, doc="option e1"),
+            f=WithMeta(6, doc="option f1"),
+        )
+        factory = OptionsFactory(
+            a=WithMeta(1, doc="option a1"),
+            b=WithMeta(2, doc="option b1"),
+            c=WithMeta(3, doc="option c1"),
+            subsection=subfactory,
+        )
+
+        factory2 = factory.add(
+            b=12,
+            c=WithMeta(13, doc="option c2"),
+            g=17,
+            subsection={"d": 14, "e": WithMeta(15, doc="option e2"), "h": 18},
+            subsection2=OptionsFactory(i=WithMeta(19, doc="option i2")),
+        )
+
+        opts = factory2.create(
+            {
+                "a": 21,
+                "b": 22,
+                "c": 23,
+                "subsection": {"d": 24, "e": 25, "f": 26, "h": 27},
+                "g": 28,
+                "subsection2": {"i": 29},
+            }
+        )
+
+        assert opts.a == 21
+        assert opts.b == 22
+        assert opts.c == 23
+        assert opts.subsection.d == 24
+        assert opts.subsection.e == 25
+        assert opts.subsection.f == 26
+        assert opts.g == 28
+        assert opts.subsection.h == 27
+        assert opts.subsection2.i == 29
+
+        assert opts.doc["a"] == "option a1"
+        assert opts.doc["b"] == "option b1"
+        assert opts.doc["c"] == "option c2"
+        assert opts.doc["subsection"]["d"] == "option d1"
+        assert opts.doc["subsection"]["e"] == "option e2"
+        assert opts.doc["subsection"]["f"] == "option f1"
+        assert opts.doc["g"] is None
+        assert opts.doc["subsection"]["h"] is None
+        assert opts.doc["subsection2"]["i"] == "option i2"
+
+        with pytest.raises(ValueError, match="Passing an OptionsFactory"):
+            factory.add(a=OptionsFactory(j=2))
+
+        with pytest.raises(ValueError, match="Updating the section"):
+            factory.add(subsection=OptionsFactory(d=14, e=15, f=16))
+
     def test_as_table(self):
         factory = OptionsFactory(a=1, b=2)
         opts = factory.create({"b": 3})
