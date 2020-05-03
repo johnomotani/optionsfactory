@@ -1,7 +1,7 @@
 import pytest
 
 from ..optionsfactory import WithMeta
-from ..checks import NoneType, is_positive, is_positive_or_None
+from ..checks import NoneType, is_positive, is_positive_or_None, is_None
 
 
 class TestWithMeta:
@@ -76,8 +76,8 @@ class TestWithMeta:
         with pytest.raises(ValueError):
             x.evaluate_expression({})
 
-    def test_checks(self):
-        x = WithMeta(4.0, checks=is_positive_or_None)
+    def test_check_all(self):
+        x = WithMeta(4.0, check_all=is_positive_or_None)
         assert x.value == 4.0
         assert x.evaluate_expression({}) == 4.0
         x.value = -2.0
@@ -86,8 +86,8 @@ class TestWithMeta:
         x.value = None
         assert x.evaluate_expression({}) is None
 
-    def test_checks_sequence(self):
-        x = WithMeta(5.0, checks=[is_positive, lambda x: x < 6.0])
+    def test_check_all_sequence(self):
+        x = WithMeta(5.0, check_all=[is_positive, lambda x: x < 6.0])
         assert x.value == 5.0
         assert x.evaluate_expression({}) == 5.0
         x.value = -3.0
@@ -104,10 +104,10 @@ class TestWithMeta:
         with pytest.raises(ValueError):
             x.evaluate_expression({"foo": 1.0})
 
-    def test_expression_checks(self):
+    def test_expression_check_all(self):
         x = WithMeta(
             lambda options: 2.0 + options["foo"],
-            checks=[is_positive, lambda x: x < 10.0],
+            check_all=[is_positive, lambda x: x < 10.0],
         )
         assert x.evaluate_expression({"foo": 2.0}) == 4.0
         assert x.evaluate_expression({"foo": 4.0}) == 6.0
@@ -115,3 +115,65 @@ class TestWithMeta:
             x.evaluate_expression({"foo": -3.0})
         with pytest.raises(ValueError):
             x.evaluate_expression({"foo": 9.0})
+
+    def test_check_any(self):
+        x = WithMeta(4.0, check_any=is_positive_or_None)
+        assert x.value == 4.0
+        assert x.evaluate_expression({}) == 4.0
+        x.value = -2.0
+        with pytest.raises(ValueError):
+            x.evaluate_expression({})
+        x.value = None
+        assert x.evaluate_expression({}) is None
+
+    def test_check_any_sequence(self):
+        x = WithMeta(5.0, check_any=[is_positive, lambda x: x < -6.0])
+        assert x.value == 5.0
+        assert x.evaluate_expression({}) == 5.0
+        x.value = -7.0
+        assert x.evaluate_expression({}) == -7.0
+        x.value = -3.0
+        with pytest.raises(ValueError):
+            x.evaluate_expression({})
+
+    def test_expression_check_any(self):
+        x = WithMeta(
+            lambda options: 2.0 + options["foo"],
+            check_any=[is_positive, lambda x: x < -10.0],
+        )
+        assert x.evaluate_expression({"foo": 2.0}) == 4.0
+        assert x.evaluate_expression({"foo": -14.0}) == -12.0
+        with pytest.raises(ValueError):
+            x.evaluate_expression({"foo": -3.0})
+        with pytest.raises(ValueError):
+            x.evaluate_expression({"foo": -11.0})
+
+    def test_combined_check_all_any(self):
+        x = WithMeta(
+            5.0, check_all=is_positive, check_any=[lambda x: x < 10.0, is_None],
+        )
+        assert x.evaluate_expression({}) == 5.0
+        x.value = -2.0
+        with pytest.raises(ValueError):
+            x.evaluate_expression({})
+        x.value = 10.5
+        with pytest.raises(ValueError):
+            x.evaluate_expression({})
+        x.value = None
+        with pytest.raises(ValueError):
+            x.evaluate_expression({})
+
+    def test_combined_check_all_any_expression(self):
+        x = WithMeta(
+            lambda options: -1.0 * options["foo"],
+            check_all=is_positive,
+            check_any=[lambda x: x < 10.0, is_None],
+        )
+        assert x.evaluate_expression({"foo": -5.0}) == 5.0
+        with pytest.raises(ValueError):
+            x.evaluate_expression({"foo": 2.0})
+        with pytest.raises(ValueError):
+            x.evaluate_expression({"foo": -10.5})
+        x.value = None
+        with pytest.raises(ValueError):
+            x.evaluate_expression({})

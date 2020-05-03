@@ -50,13 +50,13 @@ class TestOptions:
                 11,
                 doc="option g",
                 value_type=int,
-                checks=[is_positive, lambda x: x < 20],
+                check_all=[is_positive, lambda x: x < 20],
             ),
             h=WithMeta(
                 lambda options: options.a + 2,
                 doc="option h",
                 value_type=int,
-                checks=[is_positive, lambda x: x < 20],
+                check_any=[is_positive, lambda x: x < -20],
             ),
         )
 
@@ -147,13 +147,13 @@ class TestOptions:
                 11,
                 doc="option g",
                 value_type=int,
-                checks=[is_positive, lambda x: x < 20],
+                check_all=[is_positive, lambda x: x < 20],
             ),
             h=WithMeta(
                 lambda options: options.a + 2,
                 doc="option h",
                 value_type=int,
-                checks=[is_positive, lambda x: x < 20],
+                check_any=[is_positive, lambda x: x < -20],
             ),
         )
 
@@ -253,14 +253,12 @@ class TestOptions:
             opts = factory.create({"g": 3.5})
         with pytest.raises(ValueError):
             opts = factory.create({"h": -7})
-        with pytest.raises(ValueError):
-            opts = factory.create({"h": 21})
+        assert factory.create({"h": -21}).h == -21
         with pytest.raises(TypeError):
             opts = factory.create({"h": 3.5})
         with pytest.raises(ValueError):
             opts = factory.create({"a": -7})
-        with pytest.raises(ValueError):
-            opts = factory.create({"a": 21})
+        assert factory.create({"a": -23}).h == -21
         with pytest.raises(TypeError):
             opts = factory.create({"a": 3.5})
 
@@ -276,13 +274,13 @@ class TestOptions:
                 11,
                 doc="option g",
                 value_type=int,
-                checks=[is_positive, lambda x: x < 20],
+                check_all=[is_positive, lambda x: x < 20],
             ),
             h=WithMeta(
                 lambda options: options.a + 2,
                 doc="option h",
                 value_type=int,
-                checks=[is_positive, lambda x: x < 20],
+                check_any=[is_positive, lambda x: x < -20],
             ),
         )
 
