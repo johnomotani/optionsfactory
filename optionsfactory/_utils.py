@@ -16,14 +16,26 @@ def _checked(value, *, meta=None, name=None):
                 f"{'' if name is None else ' for key=' + str(name)}"
             )
 
-    if meta.checks is not None:
-        for check in meta.checks:
+    if meta.check_all is not None:
+        for check in meta.check_all:
             if not check(value):
                 raise ValueError(
                     f"The value {value}"
                     f"{'' if name is None else ' of key=' + str(name)} is not "
-                    f"compatible with the checks"
+                    f"compatible with check_all"
                 )
+
+    if meta.check_any is not None:
+        success = False
+        for check in meta.check_any:
+            if check(value):
+                success = True
+        if not success:
+            raise ValueError(
+                f"The value {value}"
+                f"{'' if name is None else ' of key=' + str(name)} is not "
+                f"compatible with check_any"
+            )
 
     return value
 
