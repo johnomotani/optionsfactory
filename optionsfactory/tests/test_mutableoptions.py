@@ -202,7 +202,6 @@ class TestOptions:
             ),
         )
 
-        # test default values
         opts = factory.create({"a": 4, "b": 5, "f": 3.0, "g": 13, "z": 17})
 
         assert opts.a == 4
@@ -532,7 +531,6 @@ class TestMutableOptionsFactoryImmutable:
             ),
         )
 
-        # test default values
         opts = factory.create_immutable({"a": 4, "b": 5, "f": 3.0, "g": 13, "z": 17})
 
         assert opts.a == 4

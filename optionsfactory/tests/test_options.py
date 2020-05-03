@@ -136,7 +136,6 @@ class TestOptions:
             ),
         )
 
-        # test default values
         opts = factory.create({"a": 4, "b": 5, "f": 3.0, "g": 13, "z": 17})
 
         assert opts.a == 4
