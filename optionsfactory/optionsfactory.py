@@ -181,11 +181,12 @@ class OptionsFactory:
                 key: _checked(value, meta=self.__defaults[key], name=key)
                 for key, value in data.items()
             }
+            self.__doc = {key: value.doc for key, value in self.__defaults.items()}
             self.__cache = {}
 
         @property
         def doc(self):
-            return {key: deepcopy(value.doc) for key, value in self.__defaults.items()}
+            return self.__doc
 
         def as_table(self):
             """Return a string with a formatted table of the settings
