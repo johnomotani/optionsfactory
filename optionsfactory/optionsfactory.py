@@ -235,6 +235,10 @@ class OptionsFactory:
         def doc(self):
             return self.__doc
 
+        @property
+        def parent(self):
+            return self.__parent
+
         def as_table(self):
             """Return a string with a formatted table of the settings
             """
@@ -292,9 +296,16 @@ class OptionsFactory:
                 if value is None:
                     yield key
 
-        def __clear_cache(self):
-            self.__cache = {}
-            if self.__parent is not None:
+        def __clear_cache(self, is_child=False):
+            if self.__parent is None or is_child:
+                # Once we have found the root MutableOptions object, follow the tree,
+                # clearing the cache of each MutableOptions section or subsection.
+                self.__cache = {}
+                for subsection in self.get_subsections():
+                    self[subsection].__clear_cache(True)
+            else:
+                # Go up until we find the root MutableOptions object, which has
+                # (self.parent is None)
                 self.__parent.__clear_cache()
 
         def __getitem__(self, key):

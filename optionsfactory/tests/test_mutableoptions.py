@@ -369,6 +369,32 @@ class TestMutableOptions:
 
         assert dict(opts1) == dict(opts3)
 
+    def test_nested_from_parent(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            subsection=MutableOptionsFactory(
+                b=2, c=lambda options: options.b + options.parent.a
+            ),
+        )
+
+        opts = factory.create({})
+
+        assert opts.a == 1
+        assert opts.subsection.b == 2
+        assert opts.subsection.c == 3
+
+        opts.a = 6
+
+        assert opts.a == 6
+        assert opts.subsection.b == 2
+        assert opts.subsection.c == 8
+
+        opts2 = factory.create({"a": 4})
+
+        assert opts2.a == 4
+        assert opts2.subsection.b == 2
+        assert opts2.subsection.c == 6
+
     def test_values_nested(self):
         factory = MutableOptionsFactory(a=1, subsection=MutableOptionsFactory(b=2), c=3)
         opts = factory.create({})
@@ -1072,6 +1098,26 @@ class TestMutableOptionsFactoryImmutable:
         opts3 = factory.create(opts1)
 
         assert dict(opts1) == dict(opts3)
+
+    def test_nested_from_parent(self):
+        factory = MutableOptionsFactory(
+            a=1,
+            subsection=MutableOptionsFactory(
+                b=2, c=lambda options: options.b + options.parent.a
+            ),
+        )
+
+        opts = factory.create_immutable({})
+
+        assert opts.a == 1
+        assert opts.subsection.b == 2
+        assert opts.subsection.c == 3
+
+        opts2 = factory.create_immutable({"a": 4})
+
+        assert opts2.a == 4
+        assert opts2.subsection.b == 2
+        assert opts2.subsection.c == 6
 
     def test_values_nested(self):
         factory = MutableOptionsFactory(a=1, subsection=MutableOptionsFactory(b=2), c=3)
