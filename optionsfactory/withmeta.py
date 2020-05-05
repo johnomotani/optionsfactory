@@ -132,6 +132,9 @@ class WithMeta:
         )
 
     def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
         return (
             f"WithMeta({self.value}, doc={self.doc}, value_type={self.value_type}), "
             f"allowed={self.allowed}, check_all={self.check_all}, "
