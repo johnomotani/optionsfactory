@@ -8,6 +8,23 @@ default values (which may be expressions depending on other options); documentat
 each option; an allowed type or list of types; a check that the value option is on an
 allowed list; checks that the value of an option satisfies some tests.
 
+
+Installation
+------------
+
+`OptionsFactory` can be installed using `pip`
+```
+pip install --user optionsfactory
+```
+or `conda`
+```
+conda install -c conda-forge optionsfactory
+```
+
+
+Usage
+-----
+
 Once the options are defined in an `OptionsFactory`, you create a particular instance of
 the options by passing some user settings (a dict or YAML file). The `OptionsFactory`
 uses the values passed, sets the remaining options from the default values or
