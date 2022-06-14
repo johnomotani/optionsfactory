@@ -414,7 +414,8 @@ class TestMutableOptions:
 
     def test_circular(self):
         factory = MutableOptionsFactory(
-            a=lambda options: options.b, b=lambda options: options.a,
+            a=lambda options: options.b,
+            b=lambda options: options.a,
         )
         opts = factory.create()
         with pytest.raises(ValueError, match="Circular definition"):
@@ -1136,7 +1137,8 @@ class TestMutableOptionsFactoryImmutable:
 
     def test_circular(self):
         factory = MutableOptionsFactory(
-            a=lambda options: options.b, b=lambda options: options.a,
+            a=lambda options: options.b,
+            b=lambda options: options.a,
         )
         with pytest.raises(ValueError, match="Circular definition"):
             opts = factory.create_immutable()

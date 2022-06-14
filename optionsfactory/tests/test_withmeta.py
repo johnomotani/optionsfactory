@@ -150,7 +150,9 @@ class TestWithMeta:
 
     def test_combined_check_all_any(self):
         x = WithMeta(
-            5.0, check_all=is_positive, check_any=[lambda x: x < 10.0, is_None],
+            5.0,
+            check_all=is_positive,
+            check_any=[lambda x: x < 10.0, is_None],
         )
         assert x.evaluate_expression({}) == 5.0
         x.value = -2.0

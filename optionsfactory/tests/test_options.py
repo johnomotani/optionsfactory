@@ -331,7 +331,8 @@ class TestOptions:
 
     def test_circular(self):
         factory = OptionsFactory(
-            a=lambda options: options.b, b=lambda options: options.a,
+            a=lambda options: options.b,
+            b=lambda options: options.a,
         )
         with pytest.raises(ValueError, match="Circular definition"):
             opts = factory.create()
@@ -483,7 +484,9 @@ class TestOptions:
 
     def test_str_nested(self):
         factory = OptionsFactory(
-            a=1, subsection=OptionsFactory(c=3, subsubsection=OptionsFactory(d=4)), b=2,
+            a=1,
+            subsection=OptionsFactory(c=3, subsubsection=OptionsFactory(d=4)),
+            b=2,
         )
         opts = factory.create({"b": 5, "subsection": {"subsubsection": {"d": 6}}})
         assert (
@@ -705,3 +708,13 @@ class TestOptions:
         assert opts.doc["subsection2"]["e"] is None
         assert opts.subsection2.subsubsection.doc["f"] == "option f"
         assert opts.subsection3.doc["z"] == "option z"
+
+    def test_dill_pickling(self):
+        import dill
+
+        factory = OptionsFactory(foo="bar")
+        options = factory.create()
+        pickled = dill.dumps(options)
+        unpickled = dill.loads(pickled, ignore=True)
+
+        assert unpickled.foo == "bar"
