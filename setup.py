@@ -15,6 +15,7 @@ setuptools.setup(
         "checking"
     ),
     extras_require={"yaml": "PyYAML>=5.1"},
+    tests_require=["dill>=0.3.0"],
     license="OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     long_description=long_description,
     long_description_content_type="text/markdown",
