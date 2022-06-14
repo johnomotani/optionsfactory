@@ -4,9 +4,7 @@ from ._utils import _checked
 
 
 class WithMeta:
-    """Type for passing metadata with options value or expression into OptionsFactory
-
-    """
+    """Type for passing metadata with options value or expression into OptionsFactory"""
 
     def __init__(
         self,

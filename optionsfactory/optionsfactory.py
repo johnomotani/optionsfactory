@@ -5,9 +5,7 @@ from .withmeta import WithMeta
 
 
 class OptionsFactory:
-    """Factory to create Options instances
-
-    """
+    """Factory to create Options instances"""
 
     def __init__(self, *args, **kwargs):
         """Define the members of Options instances that this factory will create
@@ -81,16 +79,12 @@ class OptionsFactory:
 
     @property
     def defaults(self):
-        """Get the default values defined for this OptionsFactory
-
-        """
+        """Get the default values defined for this OptionsFactory"""
         return deepcopy(self.__defaults)
 
     @property
     def doc(self):
-        """Get the documentation for the options defined for this OptionsFactory
-
-        """
+        """Get the documentation for the options defined for this OptionsFactory"""
         return {key: value.doc for key, value in self.__defaults.items()}
 
     def add(self, **kwargs):
@@ -246,8 +240,7 @@ class OptionsFactory:
             return self.__parent
 
         def as_table(self):
-            """Return a string with a formatted table of the settings
-            """
+            """Return a string with a formatted table of the settings"""
             return _options_table_string(self)
 
         def to_dict(self, with_defaults=True):
@@ -475,8 +468,7 @@ class OptionsFactory:
             return deepcopy(self.__doc)
 
         def as_table(self):
-            """Return a string with a formatted table of the settings
-            """
+            """Return a string with a formatted table of the settings"""
             return _options_table_string(self)
 
         def to_dict(self, with_defaults=True):
@@ -598,9 +590,7 @@ class OptionsFactory:
 
 
 class MutableOptionsFactory(OptionsFactory):
-    """Factory to create MutableOptions or Options instances
-
-    """
+    """Factory to create MutableOptions or Options instances"""
 
     def create(self, values=None):
         """Create a MutableOptions instance
