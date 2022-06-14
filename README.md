@@ -175,8 +175,9 @@ with the documentation for each option:
 
 ### `value_type`
 
-The value_type argument can be used to give a type or sequence of types that the option
-is allowed to have. Trying to set an option with a non-allowed type raises a
+The `value_type` argument can be used to give a type or sequence of types that
+the option is allowed to have. Trying to set an option with a non-allowed type
+raises a
 `ValueError`:
 ```python
 >>> d2 = D(d=-2)
@@ -385,6 +386,12 @@ or all values including defaults, by passing `True` to the `with_defaults` argum
 >>> with open(filename, 'w') as f:
 >>>     options.to_yaml(f, True)  # saves options with default values as well
 ```
+
+
+### Pickling (with dill)
+
+`Options` objects can be pickled using `dill`. This is tested. Pickling of
+`MutableOptions` objects is not currently supported.
 
 
 Examples

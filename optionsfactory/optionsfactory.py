@@ -546,6 +546,14 @@ class OptionsFactory:
                 raise TypeError("Options does not allow assigning to attributes")
             super(OptionsFactory.Options, self).__setattr__(key, value)
 
+        def __getstate__(self):
+            # Need to define this so that pickling with dill works
+            return vars(self)
+
+        def __setstate__(self, state):
+            # Need to define this so that pickling with dill works
+            vars(self).update(state)
+
         def is_default(self, key):
             try:
                 return self.__is_default[key]
