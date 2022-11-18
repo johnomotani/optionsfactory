@@ -141,6 +141,37 @@ class TestMutableOptions:
         with pytest.raises(KeyError):
             opts.is_default("x")
 
+        opts["f"] = 3
+
+        assert opts.a == 3
+        assert opts.b == 3
+        assert opts.c == 3
+        assert opts.d == 6.0
+        assert opts.e == 3
+        assert opts.f == 3.0
+        assert opts.g == 11
+        assert opts.h == 5
+
+        assert opts["a"] == 3
+        assert opts["b"] == 3
+        assert opts["c"] == 3
+        assert opts["d"] == 6.0
+        assert opts["e"] == 3
+        assert opts["f"] == 3.0
+        assert opts["g"] == 11
+        assert opts["h"] == 5
+
+        assert not opts.is_default("a")
+        assert opts.is_default("b")
+        assert opts.is_default("c")
+        assert opts.is_default("d")
+        assert opts.is_default("e")
+        assert not opts.is_default("f")
+        assert opts.is_default("g")
+        assert opts.is_default("h")
+        with pytest.raises(KeyError):
+            opts.is_default("x")
+
         assert "a" in opts
         assert "b" in opts
         assert "c" in opts
@@ -155,22 +186,23 @@ class TestMutableOptions:
         assert sorted([k for k in opts]) == sorted(
             ["a", "b", "c", "d", "e", "f", "g", "h"]
         )
-        assert sorted(opts.values()) == sorted([3, 3, 3, 5.0, 3, 2.0, 11, 5])
+        assert sorted(opts.values()) == sorted([3, 3, 3, 6.0, 3, 3.0, 11, 5])
         assert sorted(opts.items()) == sorted(
             [
                 ("a", 3),
                 ("b", 3),
                 ("c", 3),
-                ("d", 5.0),
+                ("d", 6.0),
                 ("e", 3),
-                ("f", 2.0),
+                ("f", 3.0),
                 ("g", 11),
                 ("h", 5),
             ]
         )
 
-        # Reset "a" to default
+        # Reset "a" and "f" to default
         del opts["a"]
+        del opts["f"]
         assert opts.a == 1
         assert opts.b == 1
         assert opts.c == 1
@@ -322,8 +354,7 @@ class TestMutableOptions:
             opts = factory.create({"f": 2.5})
         with pytest.raises(TypeError):
             opts = factory.create({"f": "2.0"})
-        with pytest.raises(TypeError):
-            opts = factory.create({"f": 2})
+        assert factory.create({"f": 2}).f == 2.0
         with pytest.raises(ValueError):
             opts = factory.create({"g": -1})
         with pytest.raises(ValueError):
@@ -1054,8 +1085,7 @@ class TestMutableOptionsFactoryImmutable:
             opts = factory.create_immutable({"f": 2.5})
         with pytest.raises(TypeError):
             opts = factory.create_immutable({"f": "2.0"})
-        with pytest.raises(TypeError):
-            opts = factory.create_immutable({"f": 2})
+        assert factory.create_immutable({"f": 2}).f == 2.0
         with pytest.raises(ValueError):
             opts = factory.create_immutable({"g": -1})
         with pytest.raises(ValueError):

@@ -1,4 +1,10 @@
+from numbers import Number
+
+
 def _checked(value, *, meta=None, name=None):
+    if (meta is not None) and meta.value_type is float and isinstance(value, Number):
+        # Allow converting any numerical type to float
+        value = float(value)
     if (
         (meta is not None)
         and (meta.value_type is not None)

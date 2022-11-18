@@ -88,8 +88,8 @@ class OptionsFactory:
         return {key: value.doc for key, value in self.__defaults.items()}
 
     def add(self, **kwargs):
-        """Create a more specific version of the factory with extra options. For example,
-        may be useful for a subclass like
+        """Create a more specific version of the factory with extra options. For
+        example, may be useful for a subclass like
 
             class Parent:
                 options_factory = OptionsFactory(...)
