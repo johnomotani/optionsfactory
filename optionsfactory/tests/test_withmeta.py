@@ -43,8 +43,13 @@ class TestWithMeta:
         assert x.evaluate_expression({}) == 3.0
 
         x.value = 3
-        with pytest.raises(TypeError):
-            x.evaluate_expression({})
+        assert x.evaluate_expression({}) == 3.0
+
+    def test_float_conversion(self):
+        x = WithMeta(3, value_type=float)
+        assert x.value_type is float
+        assert x.evaluate_expression({}) == 3.0
+        assert isinstance(x.evaluate_expression({}), float)
 
     def test_value_type_sequence(self):
         x = WithMeta(3.0, value_type=[float, NoneType])
