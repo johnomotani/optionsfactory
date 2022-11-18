@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from numbers import Number
 
 from ._utils import _checked
 
@@ -65,7 +66,11 @@ class WithMeta:
             self.check_any = value.check_any
             return
 
-        self.value = value
+        if value_type is float and isinstance(value, Number):
+            # Allow converting any numerical type to float
+            self.value = float(value)
+        else:
+            self.value = value
         self.doc = doc
 
         if isinstance(value_type, Sequence):
