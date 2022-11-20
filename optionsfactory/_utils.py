@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from numbers import Number
 
 
@@ -11,7 +12,7 @@ def _checked(value, *, meta=None, name=None):
         and (not isinstance(value, meta.value_type))
     ):
         raise TypeError(
-            f"{value} is not of type {meta.value_type}"
+            f"{value} is not of type {_stringify_sequence_of_types(meta.value_type)}"
             f"{'' if name is None else ' for key=' + str(name)}"
         )
 
@@ -86,3 +87,10 @@ def _options_table_string(options):
     result += _options_table_subsection(options, None)
 
     return result
+
+
+def _stringify_sequence_of_types(types):
+    if isinstance(types, Sequence):
+        return tuple(_stringify_sequence_of_types(t) for t in types)
+    else:
+        return types.__name__
