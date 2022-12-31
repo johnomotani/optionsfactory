@@ -195,6 +195,76 @@ class OptionsFactory:
         # Return new Options instance
         return OptionsFactory.Options(mutable_options)
 
+    def get_help_table(self, prefix=None):
+        """Print a table of the options in this OptionsFactory, with help text and
+        default values, using ReStructuredText syntax.
+
+        Parameters
+        ----------
+        prefix : str, default None
+            If a value is passed, add `prefix` to the beginning of each line, e.g. to
+            add indentation
+        """
+        if prefix is None:
+            prefix = ""
+        defaults = self.defaults
+        keys = sorted(defaults.keys())
+        docs = self.doc
+        heading1 = "Option"
+        heading2 = "Description"
+        heading3 = "Default"
+        column1_width = max(max(len(k) for k in keys), len(heading1))
+        column2_width = max(max(len(d) for d in docs.values()), len(heading2))
+        column3_width = max(max(len(str(d)) for d in defaults.values()), len(heading3))
+        separator = (
+            prefix
+            + "+"
+            + "-" * column1_width
+            + "+"
+            + "-" * column2_width
+            + "+"
+            + "-" * column3_width
+            + "+\n"
+        )
+        table = separator
+        table = (
+            table
+            + prefix
+            + "|"
+            + heading1.ljust(column1_width)
+            + "|"
+            + heading2.ljust(column2_width)
+            + "|"
+            + heading3.ljust(column3_width)
+            + "|\n"
+        )
+        table = table + (
+            prefix
+            + "+"
+            + "=" * column1_width
+            + "+"
+            + "=" * column2_width
+            + "+"
+            + "=" * column3_width
+            + "+\n"
+        )
+        for k in keys:
+            table = (
+                table
+                + prefix
+                + "|"
+                + k.ljust(column1_width)
+                + "|"
+                + docs[k].ljust(column2_width)
+                + "|"
+                + str(defaults[k].evaluate_expression(self.create())).ljust(
+                    column3_width
+                )
+                + "|\n"
+            )
+            table = table + separator
+        return table
+
     class MutableOptions:
         """Provide access to a pre-defined set of options, with default values that may
         depend on the values of other options
