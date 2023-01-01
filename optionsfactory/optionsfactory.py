@@ -208,14 +208,31 @@ class OptionsFactory:
         if prefix is None:
             prefix = ""
         defaults = self.defaults
+        evaluated_defaults = {}
+
+        # Need to use self.__create_mutable() here as if any option is required to be
+        # set then calling self.create() would cause an error (actually the error we
+        # want to catch and handle case-by-case in the try-except below).
+        mutable_options = self.__create_mutable()
+        for k, v in defaults.items():
+            try:
+                evaluated = v.evaluate_expression(mutable_options)
+            except (ValueError, TypeError):
+                # If the default value cannot be evaluated, it is required to be set in
+                # `values` when the Options or MutableOptions are created
+                evaluated = "*Required*"
+            evaluated_defaults[k] = evaluated
+
         keys = sorted(defaults.keys())
         docs = self.doc
         heading1 = "Option"
         heading2 = "Description"
         heading3 = "Default"
         column1_width = max(max(len(k) for k in keys), len(heading1))
-        column2_width = max(max(len(d) for d in docs.values()), len(heading2))
-        column3_width = max(max(len(str(d)) for d in defaults.values()), len(heading3))
+        column2_width = max(max(len(str(d)) for d in docs.values()), len(heading2))
+        column3_width = max(
+            max(len(str(d)) for d in evaluated_defaults.values()), len(heading3)
+        )
         separator = (
             prefix
             + "+"
@@ -255,11 +272,9 @@ class OptionsFactory:
                 + "|"
                 + k.ljust(column1_width)
                 + "|"
-                + docs[k].ljust(column2_width)
+                + str(docs[k]).ljust(column2_width)
                 + "|"
-                + str(defaults[k].evaluate_expression(self.create())).ljust(
-                    column3_width
-                )
+                + str(evaluated_defaults[k]).ljust(column3_width)
                 + "|\n"
             )
             table = table + separator
