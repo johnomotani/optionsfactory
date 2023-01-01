@@ -214,7 +214,7 @@ class OptionsFactory:
         heading2 = "Description"
         heading3 = "Default"
         column1_width = max(max(len(k) for k in keys), len(heading1))
-        column2_width = max(max(len(d) for d in docs.values()), len(heading2))
+        column2_width = max(max(len(str(d)) for d in docs.values()), len(heading2))
         column3_width = max(max(len(str(d)) for d in defaults.values()), len(heading3))
         separator = (
             prefix
@@ -255,7 +255,7 @@ class OptionsFactory:
                 + "|"
                 + k.ljust(column1_width)
                 + "|"
-                + docs[k].ljust(column2_width)
+                + str(docs[k]).ljust(column2_width)
                 + "|"
                 + str(defaults[k].evaluate_expression(self.create())).ljust(
                     column3_width
