@@ -195,15 +195,18 @@ class OptionsFactory:
         # Return new Options instance
         return OptionsFactory.Options(mutable_options)
 
-    def get_help_table(self, prefix=None):
+    def get_help_table(self, prefix=None, as_Texttable=False):
         """Print a table of the options in this OptionsFactory, with help text and
-        default values, using ReStructuredText syntax.
+        default values, either in text using ReStructuredText syntax, or as a
+        `texttable.Texttable` object.
 
         Parameters
         ----------
         prefix : str, default None
             If a value is passed, add `prefix` to the beginning of each line, e.g. to
             add indentation
+        as_Texttable : bool, default False
+            Return the table
         """
         if prefix is None:
             prefix = ""
@@ -228,57 +231,72 @@ class OptionsFactory:
         heading1 = "Option"
         heading2 = "Description"
         heading3 = "Default"
-        column1_width = max(max(len(k) for k in keys), len(heading1))
-        column2_width = max(max(len(str(d)) for d in docs.values()), len(heading2))
-        column3_width = max(
-            max(len(str(d)) for d in evaluated_defaults.values()), len(heading3)
-        )
-        separator = (
-            prefix
-            + "+"
-            + "-" * column1_width
-            + "+"
-            + "-" * column2_width
-            + "+"
-            + "-" * column3_width
-            + "+\n"
-        )
-        table = separator
-        table = (
-            table
-            + prefix
-            + "|"
-            + heading1.ljust(column1_width)
-            + "|"
-            + heading2.ljust(column2_width)
-            + "|"
-            + heading3.ljust(column3_width)
-            + "|\n"
-        )
-        table = table + (
-            prefix
-            + "+"
-            + "=" * column1_width
-            + "+"
-            + "=" * column2_width
-            + "+"
-            + "=" * column3_width
-            + "+\n"
-        )
-        for k in keys:
+        if as_Texttable:
+            try:
+                from texttable import Texttable
+            except ImportError:
+                print(
+                    "Please install the `texttable` package to use the `as_TextTable` "
+                    "option"
+                )
+                raise
+            tt = Texttable()
+            tt.header([heading1, heading2, heading3])
+            for k in keys:
+                tt.add_row([k, str(docs[k]), str(evaluated_defaults[k])])
+            return tt
+        else:
+            column1_width = max(max(len(k) for k in keys), len(heading1))
+            column2_width = max(max(len(str(d)) for d in docs.values()), len(heading2))
+            column3_width = max(
+                max(len(str(d)) for d in evaluated_defaults.values()), len(heading3)
+            )
+            separator = (
+                prefix
+                + "+"
+                + "-" * column1_width
+                + "+"
+                + "-" * column2_width
+                + "+"
+                + "-" * column3_width
+                + "+\n"
+            )
+            table = separator
             table = (
                 table
                 + prefix
                 + "|"
-                + k.ljust(column1_width)
+                + heading1.ljust(column1_width)
                 + "|"
-                + str(docs[k]).ljust(column2_width)
+                + heading2.ljust(column2_width)
                 + "|"
-                + str(evaluated_defaults[k]).ljust(column3_width)
+                + heading3.ljust(column3_width)
                 + "|\n"
             )
-            table = table + separator
-        return table
+            table = table + (
+                prefix
+                + "+"
+                + "=" * column1_width
+                + "+"
+                + "=" * column2_width
+                + "+"
+                + "=" * column3_width
+                + "+\n"
+            )
+            for k in keys:
+                table = (
+                    table
+                    + prefix
+                    + "|"
+                    + k.ljust(column1_width)
+                    + "|"
+                    + str(docs[k]).ljust(column2_width)
+                    + "|"
+                    + str(evaluated_defaults[k]).ljust(column3_width)
+                    + "|\n"
+                )
+                table = table + separator
+            return table
 
     class MutableOptions:
         """Provide access to a pre-defined set of options, with default values that may
