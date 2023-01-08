@@ -242,6 +242,7 @@ class OptionsFactory:
                 raise
             tt = Texttable()
             tt.header([heading1, heading2, heading3])
+            tt.set_cols_dtype(["t", "t", "t"])
             for k in keys:
                 tt.add_row([k, str(docs[k]), str(evaluated_defaults[k])])
             return tt
